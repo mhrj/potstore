@@ -245,6 +245,8 @@ model CartItem {
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity  Int      @default(1)
   colorData Json?
+  selectedColorHex String?
+  colorAdjustment  Int      @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

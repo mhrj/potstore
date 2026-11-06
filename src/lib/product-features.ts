@@ -19,7 +19,7 @@ export function parseFeatures(raw: unknown): ProductFeature[] {
   );
 }
 
-export type ColorOption = { hexCode: string; stock: number; name?: string };
+export type ColorOption = { hexCode: string; stock: number; priceAdjustment: number; name?: string };
 
 export type BundleItem = {
   title: string;
@@ -50,7 +50,7 @@ export function parseColorOptions(raw: unknown, defaultStock: number = 0): Color
     if (typeof item === 'string') {
       const hex = normalizeHex(item);
       if (hex) {
-        results.push({ hexCode: hex, stock: Math.max(0, defaultStock) });
+        results.push({ hexCode: hex, stock: Math.max(0, defaultStock), priceAdjustment: 0 });
       }
     } else if (typeof item === 'object' && item !== null) {
       const record = item as Record<string, unknown>;
@@ -65,8 +65,21 @@ export function parseColorOptions(raw: unknown, defaultStock: number = 0): Color
           } else if (typeof rawStock === 'string' && !isNaN(Number(rawStock)) && Number(rawStock) >= 0) {
             stockVal = Math.floor(Number(rawStock));
           }
+
+          let priceAdj = 0;
+          if (typeof record.priceAdjustment === 'number' && Number.isFinite(record.priceAdjustment)) {
+            priceAdj = Math.round(record.priceAdjustment);
+          } else if (typeof record.priceAdjustment === 'string' && !isNaN(Number(record.priceAdjustment))) {
+            priceAdj = Math.round(Number(record.priceAdjustment));
+          }
+
           const rawName = typeof record.name === 'string' && record.name.trim() ? record.name.trim() : undefined;
-          results.push({ hexCode: hex, stock: Math.max(0, stockVal), name: rawName });
+          results.push({
+            hexCode: hex,
+            stock: Math.max(0, stockVal),
+            priceAdjustment: priceAdj,
+            ...(rawName ? { name: rawName } : {}),
+          });
         }
       }
     }

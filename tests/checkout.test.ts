@@ -78,24 +78,55 @@ test('parseColorOptions converts legacy string arrays to objects with defaultSto
   const legacyStrings = ['#ff0000', '00ff00', '#123'];
   const parsed = parseColorOptions(legacyStrings, 7);
   assert.deepEqual(parsed, [
-    { hexCode: '#FF0000', stock: 7 },
-    { hexCode: '#00FF00', stock: 7 },
-    { hexCode: '#123', stock: 7 },
+    { hexCode: '#FF0000', stock: 7, priceAdjustment: 0 },
+    { hexCode: '#00FF00', stock: 7, priceAdjustment: 0 },
+    { hexCode: '#123', stock: 7, priceAdjustment: 0 },
   ]);
 });
 
-test('parseColorOptions preserves stock when raw contains objects', () => {
+test('parseColorOptions preserves stock and parses priceAdjustment when raw contains objects', () => {
   const objects = [
-    { hexCode: '#FF0000', stock: 2 },
-    { hex: '#00FF00', stock: 0 },
+    { hexCode: '#FF0000', stock: 2, priceAdjustment: 20000 },
+    { hex: '#00FF00', stock: 0, priceAdjustment: -5000 },
     { hexCode: '#AABBCC' },
   ];
   const parsed = parseColorOptions(objects, 10);
   assert.deepEqual(parsed, [
-    { hexCode: '#FF0000', stock: 2 },
-    { hexCode: '#00FF00', stock: 0 },
-    { hexCode: '#AABBCC', stock: 10 },
+    { hexCode: '#FF0000', stock: 2, priceAdjustment: 20000 },
+    { hexCode: '#00FF00', stock: 0, priceAdjustment: -5000 },
+    { hexCode: '#AABBCC', stock: 10, priceAdjustment: 0 },
   ]);
+});
+
+test('color-based pricing calculates tiered discounts on adjusted base price (100k base + 20k color with 10% tier discount costs 108k, not 110k)', () => {
+  const totals = priceCart([
+    {
+      product: {
+        id: 'pot-color-tier',
+        slug: 'gold-glazed-pot',
+        name: 'گلدان طلایی',
+        basePriceToman: 100000,
+        weightGrams: 500,
+        unitsPerCarton: 1,
+      },
+      tiers: [
+        { minQuantity: 1, unitPriceToman: 100000, label: 'خرده' },
+        { minQuantity: 5, unitPriceToman: 90000, label: 'بسته‌ای (۱۰٪ تخفیف)' },
+      ],
+      quantity: 5,
+      colorAdjustment: 20000,
+    },
+  ]);
+
+  const line = totals.lines[0];
+  // Base 100k + 20k color = 120k effective base price
+  // 10% tier discount on 120k gives unit price 108k (not 110k)
+  assert.equal(line.colorAdjustment, 20000);
+  assert.equal(line.listUnitToman, 120000);
+  assert.equal(line.unitToman, 108000);
+  assert.equal(line.lineTotalToman, 108000 * 5); // 540,000 Toman
+  assert.equal(totals.payableToman, 540000);
+  assert.equal(totals.discountToman, 60000); // (120k - 108k) * 5
 });
 
 test('priceCart calculates bundle weight by multiplying single bundle weight by bundle count', () => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { toFa } from '@/lib/format';
+import { formatToman, toFa } from '@/lib/format';
 import { useProductColor } from './ProductColorContext';
 import type { BundleItem, ColorOption } from '@/lib/product-features';
 
@@ -124,9 +124,16 @@ function ColorSwatchRow({
               {selectedColor}
             </span>
             {selectedOpt && (
-              <span className={selectedOpt.stock > 0 ? "text-soil-700/60 dark:text-dust-300 font-medium" : "text-red-600 dark:text-red-400 font-bold"}>
-                ({selectedOpt.stock > 0 ? `موجودی: ${toFa(selectedOpt.stock)}` : 'ناموجود'})
-              </span>
+              <>
+                <span className={selectedOpt.stock > 0 ? "text-soil-700/60 dark:text-dust-300 font-medium" : "text-red-600 dark:text-red-400 font-bold"}>
+                  ({selectedOpt.stock > 0 ? `موجودی: ${toFa(selectedOpt.stock)}` : 'ناموجود'})
+                </span>
+                {selectedOpt.priceAdjustment !== 0 && (
+                  <span className="font-bold text-flora-700 dark:text-flora-400">
+                    ({selectedOpt.priceAdjustment > 0 ? '+' : ''}{toFa(formatToman(selectedOpt.priceAdjustment))} تومان)
+                  </span>
+                )}
+              </>
             )}
           </div>
         )}

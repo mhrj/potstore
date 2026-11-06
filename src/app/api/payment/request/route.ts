@@ -58,6 +58,8 @@ export async function POST(req: Request) {
       productId: true,
       quantity: true,
       colorData: true,
+      selectedColorHex: true,
+      colorAdjustment: true,
       product: {
         select: {
           id: true,
@@ -191,6 +193,7 @@ export async function POST(req: Request) {
       ),
       quantity: i.quantity,
       colorData: i.colorData,
+      colorAdjustment: i.colorAdjustment ?? 0,
     })),
   );
 
@@ -257,10 +260,16 @@ export async function POST(req: Request) {
           const rawColorData = (l.colorData ?? cartItem?.colorData ?? null) as Record<string, unknown> | null;
 
           let itemColorData: Record<string, unknown> | null = rawColorData;
+          if (cartItem?.colorAdjustment) {
+            itemColorData = {
+              ...(itemColorData || {}),
+              colorAdjustment: cartItem.colorAdjustment,
+            };
+          }
           if (isBundle && cartItem?.product) {
             const bItems = parseBundleItems(cartItem.product.bundleItems, cartItem.product.stock);
             itemColorData = {
-              ...(rawColorData || {}),
+              ...(itemColorData || {}),
               bundleItems: bItems.map((bi) => ({
                 title: bi.title,
                 material: bi.material,

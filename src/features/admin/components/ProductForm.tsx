@@ -313,7 +313,7 @@ export default function ProductForm({
       const exists = current.some((c) => c.hexCode.toUpperCase() === normalized);
       const next = exists
         ? current.filter((c) => c.hexCode.toUpperCase() !== normalized)
-        : [...current, { hexCode: normalized, stock: Math.max(0, prev.stock ?? 0) }];
+        : [...current, { hexCode: normalized, stock: Math.max(0, prev.stock ?? 0), priceAdjustment: 0 }];
       return { ...prev, colorOptions: next };
     });
   }
@@ -338,6 +338,16 @@ export default function ProductForm({
     }));
   }
 
+  function handleUpdateColorPriceAdjustment(hex: string, priceAdjustment: number) {
+    const normalized = hex.toUpperCase();
+    setForm((prev) => ({
+      ...prev,
+      colorOptions: (prev.colorOptions ?? []).map((c) =>
+        c.hexCode.toUpperCase() === normalized ? { ...c, priceAdjustment } : c,
+      ),
+    }));
+  }
+
   function handleToggleBundleItemColor(itemIdx: number, hex: string) {
     const normalized = hex.toUpperCase();
     setForm((prev) => {
@@ -349,7 +359,7 @@ export default function ProductForm({
       const defaultStock = Math.max(0, prev.stock ?? 0);
       const next = exists
         ? current.filter((c) => c.hexCode.toUpperCase() !== normalized)
-        : [...current, { hexCode: normalized, stock: defaultStock }];
+        : [...current, { hexCode: normalized, stock: defaultStock, priceAdjustment: 0 }];
       items[itemIdx] = { ...item, colorOptions: next };
       return { ...prev, bundleItems: items };
     });
@@ -381,6 +391,23 @@ export default function ProductForm({
         ...item,
         colorOptions: current.map((c) =>
           c.hexCode.toUpperCase() === normalized ? { ...c, stock } : c,
+        ),
+      };
+      return { ...prev, bundleItems: items };
+    });
+  }
+
+  function handleUpdateBundleItemColorPriceAdjustment(itemIdx: number, hex: string, priceAdjustment: number) {
+    const normalized = hex.toUpperCase();
+    setForm((prev) => {
+      const items = [...(prev.bundleItems ?? [])];
+      const item = items[itemIdx];
+      if (!item) return prev;
+      const current = item.colorOptions ?? [];
+      items[itemIdx] = {
+        ...item,
+        colorOptions: current.map((c) =>
+          c.hexCode.toUpperCase() === normalized ? { ...c, priceAdjustment } : c,
         ),
       };
       return { ...prev, bundleItems: items };
@@ -493,10 +520,18 @@ export default function ProductForm({
                 description: it.description?.trim() || '',
                 price: it.price ?? it.priceToman ?? 0,
                 priceToman: it.price ?? it.priceToman ?? 0,
-                colorOptions: it.colorOptions ?? [],
+                colorOptions: (it.colorOptions ?? []).map((c) => ({
+                  ...c,
+                  stock: Math.max(0, Math.floor(Number(c.stock) || 0)),
+                  priceAdjustment: Math.round(Number(c.priceAdjustment) || 0),
+                })),
               })) ?? [])
             : null,
-        colorOptions: form.colorOptions ?? [],
+        colorOptions: (form.colorOptions ?? []).map((c) => ({
+          ...c,
+          stock: Math.max(0, Math.floor(Number(c.stock) || 0)),
+          priceAdjustment: Math.round(Number(c.priceAdjustment) || 0),
+        })),
         allowBatchDiscount: form.allowBatchDiscount ?? true,
         isFragile: form.isFragile ?? false,
         salePriceToman: form.salePriceToman && form.salePriceToman > 0 ? form.salePriceToman : null,
@@ -861,6 +896,7 @@ export default function ProductForm({
               onToggleColor={handleToggleColor}
               onRemoveColor={handleRemoveColorByHex}
               onUpdateStock={handleUpdateColorStock}
+              onUpdatePriceAdjustment={handleUpdateColorPriceAdjustment}
             />
           </div>
         )}
@@ -1239,6 +1275,7 @@ export default function ProductForm({
                         onToggleColor={(hex) => handleToggleBundleItemColor(idx, hex)}
                         onRemoveColor={(hex) => handleRemoveBundleItemColorByHex(idx, hex)}
                         onUpdateStock={(hex, stock) => handleUpdateBundleItemColorStock(idx, hex, stock)}
+                        onUpdatePriceAdjustment={(hex, adj) => handleUpdateBundleItemColorPriceAdjustment(idx, hex, adj)}
                       />
                     </div>
                   </div>

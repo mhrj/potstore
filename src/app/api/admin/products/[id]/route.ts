@@ -38,8 +38,9 @@ const colorOptionSchema = z.union([
   z.object({
     hexCode: z.string(),
     stock: z.coerce.number().int().min(0),
+    priceAdjustment: z.coerce.number().int().default(0),
   }),
-  z.string().transform((hex) => ({ hexCode: hex, stock: 0 })),
+  z.string().transform((hex) => ({ hexCode: hex, stock: 0, priceAdjustment: 0 })),
 ]);
 
 const bundleItemSchema = z.object({

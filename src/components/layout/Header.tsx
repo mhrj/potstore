@@ -21,9 +21,6 @@ export default async function Header() {
     { href: '/products', label: 'محصولات' },
     { href: '/articles', label: 'مقالات' },
     { href: '/cart', label: 'سبد خرید' },
-    ...(user
-      ? [{ href: isAdmin ? '/admin' : '/dashboard', label: isAdmin ? 'داشبورد مدیریت' : 'داشبورد' }]
-      : []),
   ];
 
   return (

@@ -93,6 +93,11 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-bold text-soil-900 dark:text-dust-50">{line.name}</h2>
               <ItemColorBadge colorData={line.colorData} />
+              {line.colorAdjustment !== 0 && (
+                <span className="text-[11px] font-bold text-flora-700 dark:text-flora-400 bg-flora-50 dark:bg-flora-950/60 px-2 py-0.5 rounded-md border border-flora-500/20">
+                  (تغییر قیمت رنگ: {line.colorAdjustment > 0 ? '+' : ''}{toFa(formatToman(line.colorAdjustment))} تومان)
+                </span>
+              )}
             </div>
             <p className="mt-1 text-xs text-soil-700/70 dark:text-dust-200/70">
               {formatToman(line.unitToman)} × {toFa(qty)} عدد {line.bundleSize > 1 && `(معادل ${toFa(qty / line.bundleSize)} بسته)`} — {line.tierLabel}

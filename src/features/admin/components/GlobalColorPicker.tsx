@@ -18,6 +18,7 @@ type Props = {
   onToggleColor: (hexCode: string) => void;
   onRemoveColor: (hexCode: string) => void;
   onUpdateStock?: (hexCode: string, stock: number) => void;
+  onUpdatePriceAdjustment?: (hexCode: string, priceAdjustment: number) => void;
   compact?: boolean;
 };
 
@@ -38,6 +39,7 @@ export default function GlobalColorPicker({
   onToggleColor,
   onRemoveColor,
   onUpdateStock,
+  onUpdatePriceAdjustment,
   compact = false,
 }: Props) {
   if (globalColors.length === 0) {
@@ -57,7 +59,7 @@ export default function GlobalColorPicker({
 
   const colorsList: ColorOption[] = selectedColors
     ? selectedColors
-    : (selectedHexes ?? []).map((h) => ({ hexCode: h, stock: 0 }));
+    : (selectedHexes ?? []).map((h) => ({ hexCode: h, stock: 0, priceAdjustment: 0 }));
 
   // Find color name for each selected hex
   const hexMap = new Map<string, string>();
@@ -125,9 +127,14 @@ export default function GlobalColorPicker({
       {/* Selected Color Chips */}
       {colorsList.length > 0 && (
         <div className="pt-1">
-          <span className="block text-[11px] font-bold text-soil-900 dark:text-dust-50 mb-1.5">
-            رنگ‌های انتخاب‌شده ({toFa(colorsList.length)}):
-          </span>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+            <span className="block text-[11px] font-bold text-soil-900 dark:text-dust-50">
+              رنگ‌های انتخاب‌شده ({toFa(colorsList.length)}):
+            </span>
+            <span className="text-[11px] text-soil-700/60 dark:text-dust-200/60">
+              اگر این رنگ گرانتر است عدد مثبت (مثلاً ۵۰,۰۰۰) و اگر ارزانتر است عدد منفی وارد کنید.
+            </span>
+          </div>
           <div className="flex flex-wrap gap-2">
             {colorsList.map((color, i) => {
               const name = hexMap.get(color.hexCode.toUpperCase()) || color.hexCode;
@@ -158,6 +165,29 @@ export default function GlobalColorPicker({
                         onUpdateStock?.(color.hexCode, val);
                       }}
                       className="w-16 rounded-lg border border-soil-900/15 dark:border-dust-50/20 bg-dust-50/70 dark:bg-flora-950 px-1.5 py-0.5 text-center text-xs font-bold text-soil-900 dark:text-dust-50 outline-none focus:border-flora-500 focus:bg-white dark:focus:bg-flora-900 focus:ring-1 focus:ring-flora-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-[11px] text-soil-700 dark:text-dust-200 font-medium border-e border-soil-900/10 dark:border-dust-50/10 pe-2 me-1">
+                    <label
+                      htmlFor={`color-adj-${color.hexCode.replace('#', '')}`}
+                      title="اگر این رنگ گرانتر است عدد مثبت (مثلاً 50000) و اگر ارزانتر است عدد منفی وارد کنید."
+                    >
+                      تغییر قیمت (تومان):
+                    </label>
+                    <input
+                      id={`color-adj-${color.hexCode.replace('#', '')}`}
+                      name={`colorAdj_${color.hexCode.replace('#', '')}`}
+                      type="number"
+                      placeholder="0"
+                      title="اگر این رنگ گرانتر است عدد مثبت (مثلاً 50000) و اگر ارزانتر است عدد منفی وارد کنید."
+                      value={color.priceAdjustment ?? 0}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const val = raw === '' ? 0 : Math.round(Number(raw) || 0);
+                        onUpdatePriceAdjustment?.(color.hexCode, val);
+                      }}
+                      className="w-24 rounded-lg border border-soil-900/15 dark:border-dust-50/20 bg-dust-50/70 dark:bg-flora-950 px-1.5 py-0.5 text-center text-xs font-bold text-soil-900 dark:text-dust-50 outline-none focus:border-flora-500 focus:bg-white dark:focus:bg-flora-900 focus:ring-1 focus:ring-flora-500"
                     />
                   </div>
 

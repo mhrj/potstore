@@ -267,22 +267,48 @@ export default function TieredPricing({
     typeof product.salePriceToman === 'number' &&
     product.salePriceToman > 0 &&
     product.salePriceToman < product.basePriceToman;
-  const effectiveBasePrice = hasSale ? product.salePriceToman! : product.basePriceToman;
+
+  const totalColorAdjustment = useMemo(() => {
+    if (!isBundle) {
+      if (!colorCtx?.selectedColor) return 0;
+      const opt = (product.colorOptions ?? []).find(
+        (c) => c.hexCode.toUpperCase() === colorCtx.selectedColor?.toUpperCase(),
+      );
+      return opt?.priceAdjustment ?? 0;
+    }
+    let sum = 0;
+    const items = product.bundleItems ?? [];
+    for (let idx = 0; idx < items.length; idx++) {
+      const selectedHex = colorCtx?.selectedBundleColors[idx];
+      if (selectedHex) {
+        const opt = (items[idx].colorOptions ?? []).find(
+          (c) => c.hexCode.toUpperCase() === selectedHex.toUpperCase(),
+        );
+        if (opt?.priceAdjustment) {
+          sum += opt.priceAdjustment;
+        }
+      }
+    }
+    return sum;
+  }, [
+    isBundle,
+    colorCtx?.selectedColor,
+    colorCtx?.selectedBundleColors,
+    product.colorOptions,
+    product.bundleItems,
+  ]);
+
+  const rawBasePrice = hasSale ? product.salePriceToman! : product.basePriceToman;
+  const effectiveBasePrice = rawBasePrice + totalColorAdjustment;
 
   const sorted = useMemo(
-    () =>
-      [...tiers]
-        .sort((a, b) => a.minQuantity - b.minQuantity)
-        .map((t) => ({
-          ...t,
-          unitPriceToman: Math.min(t.unitPriceToman, effectiveBasePrice),
-        })),
-    [tiers, effectiveBasePrice],
+    () => [...tiers].sort((a, b) => a.minQuantity - b.minQuantity),
+    [tiers],
   );
 
   const { packagePrice, unitEquivalent, total, savings, percent, tierLabel, hint } =
     useMemo(() => {
-      const basePackagePrice = product.basePriceToman;
+      const basePackagePrice = product.basePriceToman + totalColorAdjustment;
       if (!allowBatch) {
         const pkgPrice = effectiveBasePrice;
         const tot = pkgPrice * count;
@@ -302,7 +328,7 @@ export default function TieredPricing({
         };
       }
 
-      const t = resolveTier(sorted, count, effectiveBasePrice);
+      const t = resolveTier(sorted, count, effectiveBasePrice, product.basePriceToman);
       const pkgPrice = Math.min(t.unitPriceToman || effectiveBasePrice, effectiveBasePrice);
       const tot = pkgPrice * count;
       const save = Math.max(0, (basePackagePrice - pkgPrice) * count);
@@ -318,9 +344,18 @@ export default function TieredPricing({
         savings: save,
         percent: pct,
         tierLabel: t.label ?? (hasSale ? 'تخفیف ویژه' : 'خرده'),
-        hint: nextTierHint(sorted, count),
+        hint: nextTierHint(sorted, count, effectiveBasePrice, product.basePriceToman),
       };
-    }, [allowBatch, count, sorted, product.basePriceToman, effectiveBasePrice, hasSale, bundleSize]);
+    }, [
+      allowBatch,
+      count,
+      sorted,
+      product.basePriceToman,
+      totalColorAdjustment,
+      effectiveBasePrice,
+      hasSale,
+      bundleSize,
+    ]);
 
   const totalUnits = isBundle ? count * bundleSize : count;
   const singleBundleWeight = isBundle
@@ -393,7 +428,7 @@ export default function TieredPricing({
         const opt = singleColors.find(
           (c) => c.hexCode.toUpperCase() === chosenHex.toUpperCase(),
         );
-        selectedColorObj = opt ?? { hexCode: chosenHex, stock: product.stock };
+        selectedColorObj = opt ?? { hexCode: chosenHex, stock: product.stock, priceAdjustment: 0 };
         if (selectedColorObj.stock < count) {
           setError(`موجودی رنگ ${chosenHex} برای این تعداد کافی نیست.`);
           return;
@@ -411,6 +446,7 @@ export default function TieredPricing({
           color: selectedColorObj ? selectedColorObj.hexCode : undefined,
           selectedColor: selectedColorObj,
           bundleColors: bundleColorsData ?? colorCtx?.selectedBundleColors,
+          colorAdjustment: totalColorAdjustment,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -522,6 +558,20 @@ export default function TieredPricing({
                             style={{ backgroundColor: selectedHex }}
                           />
                           <span>{selectedHex}</span>
+                          {(() => {
+                            const opt = itemColors.find(
+                              (c) => c.hexCode.toUpperCase() === selectedHex.toUpperCase(),
+                            );
+                            if (opt && opt.priceAdjustment !== 0) {
+                              return (
+                                <span className="font-sans font-bold text-flora-700 dark:text-flora-400 dir-rtl text-[10px]">
+                                  ({opt.priceAdjustment > 0 ? '+' : ''}
+                                  {toFa(formatToman(opt.priceAdjustment))} تومان)
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                       ) : (
                         <span className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded-full font-medium">
@@ -622,11 +672,14 @@ export default function TieredPricing({
                 const isActive =
                   count >= t.minQuantity &&
                   (i === sorted.length - 1 || count < sorted[i + 1].minQuantity);
+                const tierResolved = resolveTier(sorted, t.minQuantity, effectiveBasePrice, product.basePriceToman);
+                const tierUnitPrice = tierResolved.unitPriceToman;
+                const baseRefPrice = product.basePriceToman + totalColorAdjustment;
                 const off =
-                  product.basePriceToman > 0
+                  baseRefPrice > 0
                     ? Math.round(
-                        ((product.basePriceToman - t.unitPriceToman) /
-                          product.basePriceToman) *
+                        ((baseRefPrice - tierUnitPrice) /
+                          baseRefPrice) *
                           100,
                       )
                     : 0;
@@ -644,10 +697,10 @@ export default function TieredPricing({
                     </td>
                     <td className="px-4 py-3.5 font-bold text-flora-900 dark:text-flora-300">
                       <div>
-                        <span>{formatToman(t.unitPriceToman)}</span>
-                        {t.unitPriceToman >= 1000 && (
+                        <span>{formatToman(tierUnitPrice)}</span>
+                        {tierUnitPrice >= 1000 && (
                           <span className="block text-[11px] font-normal text-soil-700/70 dark:text-dust-200/70">
-                            ({numberToWordsFa(t.unitPriceToman)} تومان)
+                            ({numberToWordsFa(tierUnitPrice)} تومان)
                           </span>
                         )}
                       </div>
@@ -779,7 +832,7 @@ export default function TieredPricing({
                 onClick={() => setCount(clamp(t.minQuantity))}
                 className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
                   count >= t.minQuantity &&
-                  resolveTier(sorted, count).minQuantity === t.minQuantity
+                  resolveTier(sorted, count, effectiveBasePrice, product.basePriceToman).minQuantity === t.minQuantity
                     ? 'bg-flora-900 text-white dark:bg-flora-700'
                     : 'bg-dust-100 dark:bg-flora-900/50 text-soil-700 dark:text-dust-200 transition-colors hover:bg-dust-200 dark:hover:bg-flora-950'
                 }`}
@@ -837,9 +890,18 @@ export default function TieredPricing({
                   </span>
                 </div>
               )}
-              <span className={`text-xl font-black ${hasSale ? 'text-red-600 dark:text-red-400' : 'text-soil-900 dark:text-dust-50'}`}>
-                {formatToman(packagePrice)}
-              </span>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className={`text-xl font-black ${hasSale ? 'text-red-600 dark:text-red-400' : 'text-soil-900 dark:text-dust-50'}`}>
+                  {formatToman(packagePrice)}
+                </span>
+                {totalColorAdjustment !== 0 && (
+                  <span className="text-xs font-medium text-flora-700 dark:text-flora-400">
+                    (شامل تغییر قیمت رنگ:{' '}
+                    {totalColorAdjustment > 0 ? '+' : ''}
+                    {toFa(formatToman(totalColorAdjustment))} تومان)
+                  </span>
+                )}
+              </div>
               {packagePrice > 0 && (
                 <span className="block text-xs font-semibold text-soil-700/80 dark:text-dust-200/80 mt-0.5">
                   ({numberToWordsFa(packagePrice)} تومان)

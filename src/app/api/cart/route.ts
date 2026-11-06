@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 const colorOptionSchema = z.object({
   hexCode: z.string(),
   stock: z.coerce.number().int().min(0),
+  priceAdjustment: z.coerce.number().int().default(0),
 });
 
 const addSchema = z.object({
@@ -16,6 +17,7 @@ const addSchema = z.object({
   color: z.union([z.string(), colorOptionSchema]).optional().nullable(),
   selectedColor: colorOptionSchema.optional().nullable(),
   bundleColors: z.record(z.string(), z.unknown()).optional().nullable(),
+  colorAdjustment: z.coerce.number().int().optional(),
 });
 
 export async function GET() {
@@ -63,7 +65,14 @@ export async function POST(req: Request) {
       colorData = { bundleColors: parsed.data.bundleColors };
     }
 
-    await addToCart(session.sub, parsed.data.productId, parsed.data.quantity, colorData);
+    await addToCart(
+      session.sub,
+      parsed.data.productId,
+      parsed.data.quantity,
+      colorData,
+      colorHex,
+      parsed.data.colorAdjustment,
+    );
     const totals = await getCartTotals(session.sub);
     return NextResponse.json({ ok: true, totals });
   } catch (e) {

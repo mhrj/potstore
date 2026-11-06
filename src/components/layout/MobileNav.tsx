@@ -39,7 +39,10 @@ export default function MobileNav({
     return () => window.removeEventListener('keydown', onKey);
   }, [open]);
 
-  const items = accountHref ? [...links, { href: accountHref, label: accountLabel }] : links;
+  const filteredLinks = links.filter((link) => link.href !== accountHref);
+  const items = accountHref
+    ? [...filteredLinks, { href: accountHref, label: accountLabel }]
+    : filteredLinks;
 
   return (
     <div className="md:hidden">

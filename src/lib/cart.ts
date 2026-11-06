@@ -26,6 +26,8 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
       productId: true,
       quantity: true,
       colorData: true,
+      selectedColorHex: true,
+      colorAdjustment: true,
       product: {
         select: {
           id: true,
@@ -77,6 +79,7 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
         ),
         quantity: i.quantity,
         colorData: i.colorData,
+        colorAdjustment: i.colorAdjustment ?? 0,
       })),
   );
 }
@@ -86,6 +89,8 @@ export async function addToCart(
   productId: string,
   quantity: number,
   colorData?: Record<string, unknown> | null,
+  clientSelectedColorHex?: string | null,
+  clientColorAdjustment?: number,
 ) {
   const product = await prisma.product.findFirst({
     where: { id: productId, isActive: true },
@@ -132,19 +137,29 @@ export async function addToCart(
     );
   }
 
+  let finalAdjustment = 0;
+  let finalColorHex: string | null = clientSelectedColorHex ?? null;
+
   if (!isBundle) {
     const singleColors = parseColorOptions(product.colorOptions, product.stock);
     const selColor = colorData?.selectedColor as { hexCode?: string } | undefined;
     const chosenHex =
+      clientSelectedColorHex ??
       selColor?.hexCode ??
       (typeof colorData?.color === 'string' ? colorData.color : null);
 
-    if (chosenHex && singleColors.length > 0) {
-      const opt = singleColors.find(
-        (c) => c.hexCode.toUpperCase() === chosenHex.toUpperCase(),
-      );
-      if (opt && opt.stock < target) {
-        throw new Error(`موجودی رنگ ${opt.hexCode} کافی نیست (موجودی: ${toFa(opt.stock)} عدد)`);
+    if (chosenHex) {
+      finalColorHex = chosenHex;
+      if (singleColors.length > 0) {
+        const opt = singleColors.find(
+          (c) => c.hexCode.toUpperCase() === chosenHex.toUpperCase(),
+        );
+        if (opt) {
+          if (opt.stock < target) {
+            throw new Error(`موجودی رنگ ${opt.hexCode} کافی نیست (موجودی: ${toFa(opt.stock)} عدد)`);
+          }
+          finalAdjustment = opt.priceAdjustment;
+        }
       }
     }
   } else if (colorData?.bundleColors) {
@@ -162,21 +177,40 @@ export async function addToCart(
         const opt = itColors.find(
           (c) => c.hexCode.toUpperCase() === chosenHex.toUpperCase(),
         );
-        if (opt && opt.stock < bundleCount) {
-          throw new Error(
-            `موجودی رنگ ${opt.hexCode} برای ${it.title} کافی نیست (موجودی: ${toFa(opt.stock)} عدد)`,
-          );
+        if (opt) {
+          if (opt.stock < bundleCount) {
+            throw new Error(
+              `موجودی رنگ ${opt.hexCode} برای ${it.title} کافی نیست (موجودی: ${toFa(opt.stock)} عدد)`,
+            );
+          }
+          finalAdjustment += opt.priceAdjustment;
         }
       }
     }
+  }
+
+  if (finalAdjustment === 0 && typeof clientColorAdjustment === 'number' && Number.isFinite(clientColorAdjustment)) {
+    finalAdjustment = clientColorAdjustment;
   }
 
   const jsonColorData = (colorData as Prisma.InputJsonValue) ?? Prisma.JsonNull;
 
   return prisma.cartItem.upsert({
     where: { userId_productId: { userId, productId } },
-    update: { quantity: target, ...(colorData !== undefined ? { colorData: jsonColorData } : {}) },
-    create: { userId, productId, quantity: target, colorData: jsonColorData },
+    update: {
+      quantity: target,
+      selectedColorHex: finalColorHex,
+      colorAdjustment: finalAdjustment,
+      ...(colorData !== undefined ? { colorData: jsonColorData } : {}),
+    },
+    create: {
+      userId,
+      productId,
+      quantity: target,
+      selectedColorHex: finalColorHex,
+      colorAdjustment: finalAdjustment,
+      colorData: jsonColorData,
+    },
   });
 }
 

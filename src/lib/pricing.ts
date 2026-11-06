@@ -42,6 +42,7 @@ export type PricedLine = {
     saveMoreToman: number;
   } | null;
   colorData?: unknown;
+  colorAdjustment: number;
 };
 
 export type CartTotals = {
@@ -71,6 +72,7 @@ export function resolveTier(
   tiers: Tier[] | null | undefined,
   qty: number,
   fallbackUnitPrice: number = 0,
+  basePrice?: number,
 ): Tier {
   if (!tiers || !tiers.length) {
     return { minQuantity: 1, unitPriceToman: fallbackUnitPrice, label: 'تک‌فروشی' };
@@ -78,19 +80,45 @@ export function resolveTier(
   const sorted = [...tiers].sort((a, b) => a.minQuantity - b.minQuantity);
   let active = sorted[0];
   for (const t of sorted) if (qty >= t.minQuantity) active = t;
+
+  const refBase =
+    basePrice && basePrice > 0
+      ? basePrice
+      : (sorted.find((t) => t.minQuantity === 1)?.unitPriceToman ?? fallbackUnitPrice);
+
+  if (fallbackUnitPrice > 0 && refBase > 0 && fallbackUnitPrice !== refBase) {
+    const ratio = active.unitPriceToman / refBase;
+    return {
+      minQuantity: active.minQuantity,
+      unitPriceToman: Math.round(fallbackUnitPrice * ratio),
+      label: active.label,
+    };
+  }
+
   return active;
 }
 
-export function resolveUnitPrice(tiers: Tier[] | null | undefined, qty: number, fallbackUnitPrice = 0): number {
-  return resolveTier(tiers, qty, fallbackUnitPrice).unitPriceToman;
+export function resolveUnitPrice(
+  tiers: Tier[] | null | undefined,
+  qty: number,
+  fallbackUnitPrice = 0,
+  basePrice?: number,
+): number {
+  return resolveTier(tiers, qty, fallbackUnitPrice, basePrice).unitPriceToman;
 }
 
-export function nextTierHint(tiers: Tier[] | null | undefined, qty: number) {
+export function nextTierHint(
+  tiers: Tier[] | null | undefined,
+  qty: number,
+  fallbackUnitPrice: number = 0,
+  basePrice?: number,
+) {
   if (!tiers || !tiers.length) return null;
   const sorted = [...tiers].sort((a, b) => a.minQuantity - b.minQuantity);
-  const current = resolveTier(sorted, qty);
-  const next = sorted.find((t) => t.minQuantity > qty);
-  if (!next) return null;
+  const current = resolveTier(sorted, qty, fallbackUnitPrice, basePrice);
+  const nextRaw = sorted.find((t) => t.minQuantity > qty);
+  if (!nextRaw) return null;
+  const next = resolveTier(sorted, nextRaw.minQuantity, fallbackUnitPrice, basePrice);
   return {
     minQuantity: next.minQuantity,
     unitPriceToman: next.unitPriceToman,
@@ -122,9 +150,10 @@ type PriceInput = {
   tiers: Tier[];
   quantity: number;
   colorData?: unknown;
+  colorAdjustment?: number;
 };
 
-export function priceLine({ product, tiers, quantity, colorData }: PriceInput): PricedLine {
+export function priceLine({ product, tiers, quantity, colorData, colorAdjustment = 0 }: PriceInput): PricedLine {
   const bundleSize = Math.max(1, product.bundleSize ?? 1);
   const isBundle = bundleSize > 1;
   const qty = Math.max(bundleSize, Math.floor(quantity));
@@ -134,11 +163,11 @@ export function priceLine({ product, tiers, quantity, colorData }: PriceInput): 
     typeof product.salePriceToman === 'number' &&
     product.salePriceToman > 0 &&
     product.salePriceToman < product.basePriceToman;
-  const effectiveBasePrice = hasSale ? product.salePriceToman! : product.basePriceToman;
+  const effectiveBasePrice = (hasSale ? product.salePriceToman! : product.basePriceToman) + colorAdjustment;
 
   const bundleCount = isBundle ? Math.max(1, Math.round(qty / bundleSize)) : qty;
-  const baseUnitPrice = Math.round(product.basePriceToman / bundleSize);
-  const listUnitToman = baseUnitPrice;
+  const baseUnitPrice = Math.round(effectiveBasePrice / bundleSize);
+  const listUnitToman = isBundle ? baseUnitPrice : effectiveBasePrice;
   const singleBundleWeight = isBundle && product.bundleItems && product.bundleItems.length > 0
     ? (product.bundleItems.reduce((sum, item) => sum + (item.weightGrams || 0), 0) || product.weightGrams)
     : product.weightGrams;
@@ -150,7 +179,7 @@ export function priceLine({ product, tiers, quantity, colorData }: PriceInput): 
   if (!allowBatch) {
     const unitToman = isBundle ? Math.round(effectiveBasePrice / bundleSize) : effectiveBasePrice;
     const lineTotalToman = isBundle
-      ? Math.round(effectiveBasePrice * (qty / bundleSize))
+      ? Math.round(effectiveBasePrice * bundleCount)
       : unitToman * qty;
     const lineSavingsToman = Math.max(0, (listUnitToman - unitToman) * qty);
     const savingsPercent =
@@ -177,16 +206,17 @@ export function priceLine({ product, tiers, quantity, colorData }: PriceInput): 
       tierLabel: hasSale ? 'تخفیف ویژه' : 'تک‌فروشی',
       nextTier: null,
       colorData: colorData ?? null,
+      colorAdjustment,
     };
   }
 
   // With allowBatchDiscount enabled:
   if (isBundle) {
-    const tier = resolveTier(tiers, bundleCount, effectiveBasePrice);
+    const tier = resolveTier(tiers, bundleCount, effectiveBasePrice, product.basePriceToman);
     const packagePrice = Math.min(tier.unitPriceToman, effectiveBasePrice);
     const lineTotalToman = packagePrice * bundleCount;
     const unitToman = Math.round(packagePrice / bundleSize);
-    const fullListTotal = product.basePriceToman * bundleCount;
+    const fullListTotal = effectiveBasePrice * bundleCount;
     const lineSavingsToman = Math.max(0, fullListTotal - lineTotalToman);
     const savingsPercent =
       fullListTotal > 0 ? Math.round((lineSavingsToman / fullListTotal) * 100) : 0;
@@ -210,12 +240,13 @@ export function priceLine({ product, tiers, quantity, colorData }: PriceInput): 
       unitsPerCarton: product.unitsPerCarton ?? 1,
       cartons,
       tierLabel: tier.label ?? (hasSale ? 'تخفیف ویژه' : CHANNEL_LABEL[resolveChannel(qty)]),
-      nextTier: nextTierHint(tiers, bundleCount),
+      nextTier: nextTierHint(tiers, bundleCount, effectiveBasePrice, product.basePriceToman),
       colorData: colorData ?? null,
+      colorAdjustment,
     };
   }
 
-  const tier = resolveTier(tiers, qty, effectiveBasePrice);
+  const tier = resolveTier(tiers, qty, effectiveBasePrice, product.basePriceToman);
   const unitToman = Math.min(tier.unitPriceToman, effectiveBasePrice);
   const lineTotalToman = unitToman * qty;
   const lineSavingsToman = Math.max(0, (listUnitToman - unitToman) * qty);
@@ -244,8 +275,9 @@ export function priceLine({ product, tiers, quantity, colorData }: PriceInput): 
     unitsPerCarton: product.unitsPerCarton ?? 1,
     cartons,
     tierLabel: tier.label ?? (hasSale ? 'تخفیف ویژه' : CHANNEL_LABEL[resolveChannel(qty)]),
-    nextTier: nextTierHint(tiers, qty),
+    nextTier: nextTierHint(tiers, qty, effectiveBasePrice, product.basePriceToman),
     colorData: colorData ?? null,
+    colorAdjustment,
   };
 }
 

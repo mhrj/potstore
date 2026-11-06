@@ -50,3 +50,23 @@ test('toEn converts Persian and Arabic digits to ASCII digits', async () => {
   assert.equal(toEn('123abc'), '123abc');
 });
 
+test('mobile navigation deduplicates account link if already present in base links', () => {
+  const links = [
+    { href: '/products', label: 'محصولات' },
+    { href: '/articles', label: 'مقالات' },
+    { href: '/cart', label: 'سبد خرید' },
+    { href: '/admin', label: 'داشبورد مدیریت' },
+  ];
+  const accountHref = '/admin';
+  const accountLabel = 'داشبورد مدیریت';
+
+  const filteredLinks = links.filter((link) => link.href !== accountHref);
+  const items = accountHref
+    ? [...filteredLinks, { href: accountHref, label: accountLabel }]
+    : filteredLinks;
+
+  assert.equal(items.filter((i) => i.href === '/admin').length, 1);
+  assert.deepEqual(items.map((i) => i.href), ['/products', '/articles', '/cart', '/admin']);
+});
+
+
