@@ -141,7 +141,7 @@ export default function LandingImageManager({ initial }: { initial: LandingImage
                 </div>
 
                 {/* Substantial preview area preserving aspect ratio with object-contain */}
-                <div className="relative mt-4 flex h-60 w-full items-center justify-center overflow-hidden rounded-xl border border-soil-900/5 dark:border-dust-50/10 bg-white p-2">
+                <div className="relative mt-4 flex h-60 w-full items-center justify-center overflow-hidden rounded-xl border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950 p-2">
                   {currentUrl && !hasError && (
                     <img
                       src={currentUrl}

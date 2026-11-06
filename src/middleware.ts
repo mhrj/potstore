@@ -4,7 +4,7 @@ import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth-edge';
 const PROTECTED = ['/dashboard', '/checkout', '/admin'];
 const PUBLIC_CHECKOUT = ['/checkout/success', '/checkout/failed'];
 const ADMIN_ONLY = ['/admin'];
-const AUTH_PAGES = ['/login'];
+const AUTH_PAGES = ['/login', '/register'];
 
 export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;

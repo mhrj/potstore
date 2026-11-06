@@ -63,7 +63,7 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
 
   return (
     <li className="flex gap-4 rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-4">
-      <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-white border border-soil-900/5 dark:border-dust-50/10">
+      <div className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-white dark:bg-flora-950 border border-soil-900/5 dark:border-dust-50/10">
         {line.imageUrl ? (
           <Image
             src={line.imageUrl}

@@ -1,25 +1,27 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import { prisma } from '@/lib/prisma';
-import { requireAdmin } from '@/lib/auth';
-import { toFa } from '@/lib/format';
-import { isUnoptimizedImage } from '@/lib/image-validation';
-import ArticleDeleteButton from '@/features/admin/components/ArticleDeleteButton';
+import Link from "next/link";
+import Image from "next/image";
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth";
+import { toFa } from "@/lib/format";
+import { isUnoptimizedImage } from "@/lib/image-validation";
+import ArticleDeleteButton from "@/features/admin/components/ArticleDeleteButton";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function AdminArticlesPage() {
   await requireAdmin();
 
   const articles = await prisma.article.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: "desc" },
   });
 
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-soil-900 dark:text-dust-50">مقالات و راهنماها</h1>
+          <h1 className="text-2xl font-black text-soil-900 dark:text-dust-50">
+            مقالات و راهنماها
+          </h1>
           <p className="mt-2 text-sm text-soil-700/70 dark:text-dust-300/70">
             {toFa(articles.length)} مقاله ثبت‌شده در وبلاگ
           </p>
@@ -34,9 +36,12 @@ export default async function AdminArticlesPage() {
 
       {articles.length === 0 ? (
         <div className="mt-8 rounded-3xl border border-dashed border-soil-900/15 bg-white p-12 text-center dark:border-dust-50/20 dark:bg-flora-900">
-          <p className="text-sm font-bold text-soil-800 dark:text-dust-50">هنوز مقاله‌ای منتشر نشده است</p>
+          <p className="text-sm font-bold text-soil-800 dark:text-dust-50">
+            هنوز مقاله‌ای منتشر نشده است
+          </p>
           <p className="mt-2 text-xs text-soil-700/70 dark:text-dust-300/70">
-            با انتشار مقالات تخصصی نگهداری گل و گیاه، ترافیک ارگانیک سایت را افزایش دهید.
+            با انتشار مقالات تخصصی نگهداری گل و گیاه، ترافیک ارگانیک سایت را
+            افزایش دهید.
           </p>
           <Link
             href="/admin/articles/new"
@@ -53,7 +58,7 @@ export default async function AdminArticlesPage() {
               className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-2xl border border-soil-900/10 bg-white p-4 shadow-sm transition hover:border-soil-900/20 dark:border-dust-50/10 dark:bg-flora-900 dark:hover:border-dust-50/20"
             >
               <div className="flex items-start gap-4 min-w-0 flex-1">
-                <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-soil-900/5 dark:border-dust-50/10 bg-white">
+                <div className="relative size-16 shrink-0 overflow-hidden rounded-xl border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950">
                   {article.coverImage ? (
                     <Image
                       src={article.coverImage}
@@ -78,11 +83,11 @@ export default async function AdminArticlesPage() {
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                         article.isPublished
-                          ? 'border border-flora-300/40 bg-flora-100 text-flora-900 dark:border-flora-700 dark:bg-flora-950 dark:text-flora-300'
-                          : 'bg-dust-200 text-soil-700 dark:bg-flora-900 dark:text-dust-300'
+                          ? "border border-flora-300/40 bg-flora-100 text-flora-900 dark:border-flora-700 dark:bg-flora-950 dark:text-flora-300"
+                          : "bg-dust-200 text-soil-700 dark:bg-flora-900 dark:text-dust-300"
                       }`}
                     >
-                      {article.isPublished ? 'منتشر شده' : 'پیش‌نویس'}
+                      {article.isPublished ? "منتشر شده" : "پیش‌نویس"}
                     </span>
                   </div>
 

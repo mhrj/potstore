@@ -63,7 +63,7 @@ export default async function AdminProductsPage() {
               key={p.id}
               className="flex items-center gap-4 rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-3"
             >
-              <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-white border border-soil-900/5 dark:border-dust-50/10">
+              <div className="relative size-16 shrink-0 overflow-hidden rounded-xl bg-white dark:bg-flora-950 border border-soil-900/5 dark:border-dust-50/10">
                 {p.images[0]?.url ? (
                   <Image
                     src={p.images[0].url}
@@ -106,7 +106,7 @@ export default async function AdminProductsPage() {
                 )}
                 <Link
                   href={'/admin/products/' + p.id}
-                  className="rounded-full bg-dust-100 dark:bg-flora-950 dark:text-dust-300 dark:hover:bg-flora-900 border border-transparent dark:border-dust-50/10 px-4 py-1.5 text-[11px] font-bold text-soil-900 transition-colors hover:bg-dust-200"
+                  className="rounded-full bg-dust-100 text-soil-900 hover:bg-dust-200 dark:bg-flora-950 dark:text-dust-300 dark:hover:bg-flora-900 border border-transparent dark:border-dust-50/10 px-4 py-1.5 text-[11px] font-bold transition-colors"
                 >
                   ویرایش
                 </Link>

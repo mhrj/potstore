@@ -189,7 +189,7 @@ export default function ArticleForm({ initialData }: ArticleFormProps) {
             </label>
           </div>
           {coverImage && (
-            <div className="mt-3 relative h-40 w-72 overflow-hidden rounded-2xl border border-soil-900/5 dark:border-dust-50/10 bg-white">
+            <div className="mt-3 relative h-40 w-72 overflow-hidden rounded-2xl border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950">
               <Image
                 src={coverImage}
                 alt="پیش‌نمایش تصویر شاخص"

@@ -24,7 +24,7 @@ export default function ArticleCard({ article }: { article: ArticleCardData }) {
       {/* Cover Image */}
       <Link
         href={`/articles/${article.slug}`}
-        className="relative block aspect-16/10 w-full overflow-hidden rounded-2xl border border-soil-900/5 dark:border-dust-50/10 bg-white"
+        className="relative block aspect-16/10 w-full overflow-hidden rounded-2xl border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950"
       >
         {article.coverImage ? (
           <Image
@@ -36,7 +36,7 @@ export default function ArticleCard({ article }: { article: ArticleCardData }) {
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
           />
         ) : (
-          <div className="grid h-full w-full place-items-center bg-white text-4xl">
+          <div className="grid h-full w-full place-items-center bg-white dark:bg-flora-950 text-4xl">
             🪴
           </div>
         )}

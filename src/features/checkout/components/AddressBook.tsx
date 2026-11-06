@@ -145,7 +145,7 @@ export default function AddressBook({ initial }: { initial: AddressRecord[] }) {
                 <button
                   type="button"
                   onClick={() => setEditingId(a.id)}
-                  className="rounded-full bg-dust-100 dark:bg-flora-950 dark:text-dust-300 dark:hover:bg-flora-900 border border-transparent dark:border-dust-50/10 px-3.5 py-2 text-[11px] font-bold text-soil-900 transition-colors hover:bg-dust-200"
+                  className="rounded-full bg-dust-100 text-soil-900 hover:bg-dust-200 dark:bg-flora-950 dark:text-dust-300 dark:hover:bg-flora-900 border border-transparent dark:border-dust-50/10 px-3.5 py-2 text-[11px] font-bold transition-colors"
                 >
                   ویرایش
                 </button>

@@ -90,7 +90,7 @@ export default function ArticleDetailView({
 
           {/* Cover Image */}
           {article.coverImage && (
-            <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-soil-900/10 dark:border-dust-50/10 shadow-lg shadow-soil-900/5 dark:shadow-none mb-10 bg-white">
+            <div className="relative aspect-video w-full overflow-hidden rounded-3xl border border-soil-900/10 dark:border-dust-50/10 shadow-lg shadow-soil-900/5 dark:shadow-none mb-10 bg-white dark:bg-flora-950">
               <Image
                 src={article.coverImage}
                 alt={article.title}
@@ -162,7 +162,7 @@ export default function ArticleDetailView({
                   className="group flex flex-col overflow-hidden rounded-3xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-5 shadow-sm dark:shadow-none transition hover:-translate-y-1 hover:shadow-lg dark:hover:border-dust-50/20"
                 >
                   {rel.coverImage && (
-                    <div className="relative aspect-16/10 w-full overflow-hidden rounded-2xl mb-4 bg-white border border-soil-900/5 dark:border-dust-50/10">
+                    <div className="relative aspect-16/10 w-full overflow-hidden rounded-2xl mb-4 bg-white dark:bg-flora-950 border border-soil-900/5 dark:border-dust-50/10">
                       <Image
                         src={rel.coverImage}
                         alt={rel.title}

@@ -1393,7 +1393,7 @@ export default function ProductForm({
             return (
               <div key={i} className="rounded-xl border border-soil-900/10 dark:border-dust-50/10 bg-dust-50 dark:bg-flora-950 p-4">
                 {/* Image preview area with comfortable height and aspect ratio preservation */}
-                <div className="relative mb-3 flex min-h-60 h-80 w-full items-center justify-center overflow-hidden rounded-xl border border-soil-900/5 dark:border-dust-50/10 bg-white p-2">
+                <div className="relative mb-3 flex min-h-60 h-80 w-full items-center justify-center overflow-hidden rounded-xl border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950 p-2">
                   {url && !hasError && (
                     <img
                       src={url}

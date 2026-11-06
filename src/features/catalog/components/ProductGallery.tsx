@@ -32,7 +32,7 @@ export default function ProductGallery({
 
   return (
     <div>
-      <div className="relative aspect-square overflow-hidden rounded-2xl md:rounded-3xl bg-white border border-soil-900/5 dark:border-dust-50/10 shadow-sm">
+      <div className="relative aspect-square overflow-hidden rounded-2xl md:rounded-3xl bg-white dark:bg-flora-950 border border-soil-900/5 dark:border-dust-50/10 shadow-sm">
         <Image
           key={active.id}
           src={active.url}
@@ -60,7 +60,7 @@ export default function ProductGallery({
                 aria-label={`نمایش تصویر ${index + 1}`}
                 aria-current={index === activeIndex}
                 className={
-                  'relative block aspect-square w-full overflow-hidden rounded-xl bg-white border border-soil-900/5 dark:border-dust-50/10 transition ' +
+                  'relative block aspect-square w-full overflow-hidden rounded-xl bg-white dark:bg-flora-950 border border-soil-900/5 dark:border-dust-50/10 transition ' +
                   (index === activeIndex
                     ? 'ring-2 ring-flora-700 dark:ring-flora-300 ring-offset-2 ring-offset-dust-50 dark:ring-offset-flora-950'
                     : 'opacity-70 hover:opacity-100')

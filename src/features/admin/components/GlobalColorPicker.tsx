@@ -132,7 +132,7 @@ export default function GlobalColorPicker({
               رنگ‌های انتخاب‌شده ({toFa(colorsList.length)}):
             </span>
             <span className="text-[11px] text-soil-700/60 dark:text-dust-200/60">
-              اگر این رنگ گرانتر است عدد مثبت (مثلاً ۵۰,۰۰۰) و اگر ارزانتر است عدد منفی وارد کنید.
+              اگر این رنگ گران‌تر است عدد مثبت (مثلاً ۵۰٬۰۰۰) و اگر ارزان‌تر است عدد منفی وارد کنید.
             </span>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -171,7 +171,7 @@ export default function GlobalColorPicker({
                   <div className="flex items-center gap-1.5 text-[11px] text-soil-700 dark:text-dust-200 font-medium border-e border-soil-900/10 dark:border-dust-50/10 pe-2 me-1">
                     <label
                       htmlFor={`color-adj-${color.hexCode.replace('#', '')}`}
-                      title="اگر این رنگ گرانتر است عدد مثبت (مثلاً 50000) و اگر ارزانتر است عدد منفی وارد کنید."
+                      title="اگر این رنگ گران‌تر است عدد مثبت (مثلاً ۵۰٬۰۰۰) و اگر ارزان‌تر است عدد منفی وارد کنید."
                     >
                       تغییر قیمت (تومان):
                     </label>
@@ -180,7 +180,7 @@ export default function GlobalColorPicker({
                       name={`colorAdj_${color.hexCode.replace('#', '')}`}
                       type="number"
                       placeholder="0"
-                      title="اگر این رنگ گرانتر است عدد مثبت (مثلاً 50000) و اگر ارزانتر است عدد منفی وارد کنید."
+                      title="اگر این رنگ گران‌تر است عدد مثبت (مثلاً ۵۰٬۰۰۰) و اگر ارزان‌تر است عدد منفی وارد کنید."
                       value={color.priceAdjustment ?? 0}
                       onChange={(e) => {
                         const raw = e.target.value;

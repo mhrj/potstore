@@ -60,7 +60,7 @@ export default function ProductCard({ product, className = '' }: Props) {
       className={`group block rounded-2xl md:rounded-3xl bg-white dark:bg-flora-900 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-soil-900/5 dark:border-dust-100/10 p-2 sm:p-2.5 ${className}`}
     >
       {/* Product Image Wrapper */}
-      <div className="relative aspect-square rounded-xl overflow-hidden border border-soil-900/5 dark:border-dust-50/10 bg-white">
+      <div className="relative aspect-square rounded-xl overflow-hidden border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950">
         {product.images?.[0]?.url && product.images[0].url.trim().length > 0 ? (
           <Image
             src={product.images[0].url}
@@ -73,7 +73,7 @@ export default function ProductCard({ product, className = '' }: Props) {
             unoptimized={isUnoptimizedImage(product.images[0].url)}
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-white text-soil-700/30 dark:text-dust-300/30">
+          <div className="flex h-full w-full items-center justify-center bg-white dark:bg-flora-950 text-soil-700/30 dark:text-dust-300/30">
             <svg className="size-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path
                 strokeLinecap="round"
