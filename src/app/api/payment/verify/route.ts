@@ -170,6 +170,13 @@ export async function GET(req: Request) {
         if (decremented.count === 0) {
           throw new StockShortageError(item.productName);
         }
+
+        if (item.variantId) {
+          await tx.productVariant.updateMany({
+            where: { id: item.variantId, stock: { gte: item.quantity } },
+            data: { stock: { decrement: item.quantity } },
+          });
+        }
       }
 
       await tx.cartItem.deleteMany({ where: { userId: order.userId } });

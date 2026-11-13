@@ -106,7 +106,7 @@ export default function LandingPageView({
                 href="#wholesale-inquiry"
                 className="group inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full border border-soil-900/15 bg-white/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-8 py-4 text-sm sm:text-base font-bold text-soil-900 dark:text-dust-50 backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-white dark:hover:bg-flora-950 hover:border-soil-900/35 dark:hover:border-dust-100/30 hover:shadow-xl hover:shadow-soil-900/10 active:scale-[0.98]"
               >
-                <span>خرید عمده و استعلام قیمت</span>
+                <span>استعلام پروژه و تأمین سازمانی</span>
                 <span className="text-flora-700 dark:text-flora-300 transition duration-300 group-hover:translate-x-1">←</span>
               </Link>
             </div>
@@ -209,20 +209,20 @@ export default function LandingPageView({
                 ✨ بدون نیاز به کد تخفیف
               </span>
               <h2 className="mt-4 text-3xl font-black text-white sm:text-4xl leading-tight">
-                {content.promo_title?.body || 'خرید عمده، به‌صرفه‌تر'}
+                {content.promo_title?.body || 'خرید هوشمندانه برای کافه‌ها، دفاتر و خانه‌ها'}
               </h2>
               <p className="mt-4 text-sm sm:text-base leading-8 text-flora-100/90">
                 {renderFormattedText(
                   content.promo_subtitle?.body ||
-                    'اگر قصد تجهیز یک پروژه بزرگ را دارید یا به **فاکتور رسمی و قرارداد سازمانی** نیاز دارید، فرم زیر را تکمیل کنید تا کارشناسان ما بهترین شرایط را به شما ارائه دهند.',
+                    'نیازی به ثبت درخواست سازمانی ندارید. سیستم ما تخفیف‌ها را به صورت خودکار محاسبه می‌کند. هرچه بیشتر خرید کنید، هزینه کمتری پرداخت خواهید کرد.',
                 )}
               </p>
               <ul className="mt-8 space-y-3.5 text-xs sm:text-sm">
                 {[
-                  'تخفیف خرید عمده و تعداد بالا',
-                  'مناسب خرید خانه، گلخانه و فروشگاه‌ها',
+                  'تخفیف پلکانی و خودکار بر اساس تعداد',
+                  'مناسب خرید شخصی، کافه‌ها و دفاتر',
                   'قیمت مشخص و شفاف برای هر محصول',
-                  'امکان خرید از یک عدد تا تعداد بالا',
+                  'امکان خرید آنلاین از یک عدد تا بسته‌های چندتایی',
                 ].map((f) => (
                   <li key={f} className="flex items-start gap-3">
                     <span className="mt-1 size-1.5 shrink-0 rounded-full bg-flora-300" />
@@ -237,17 +237,17 @@ export default function LandingPageView({
               <div className="rounded-pot bg-flora-950/70 border border-flora-700/40 dark:border-dust-100/10 p-6 sm:p-8 backdrop-blur shadow-xl">
                 <div className="overflow-x-auto">
                   <table className="w-full text-start text-xs sm:text-sm">
-                    <caption className="sr-only">جدول خرید عمده و تخفیف پلکانی بر اساس تعداد سفارش</caption>
+                    <caption className="sr-only">جدول تخفیف خودکار و پلکانی بر اساس تعداد سفارش</caption>
                     <thead>
                       <tr className="border-b border-flora-100/15 text-flora-200/80">
                         <th scope="col" className="pb-3 text-start font-bold">
-                          تعداد
+                          تعداد خرید
                         </th>
                         <th scope="col" className="pb-3 text-start font-bold">
-                          میزان تخفیف
+                          تخفیف خودکار
                         </th>
                         <th scope="col" className="pb-3 text-start font-bold">
-                          توضیحات
+                          مناسب برای
                         </th>
                       </tr>
                     </thead>
@@ -260,7 +260,7 @@ export default function LandingPageView({
                           قیمت پایه
                         </td>
                         <td className="py-4 text-flora-100/70">
-                          بدون تخفیف
+                          مناسب برای خرید شخصی و گیاهان خانگی
                         </td>
                       </tr>
                       <tr className="transition-colors hover:bg-white/5">
@@ -273,7 +273,7 @@ export default function LandingPageView({
                           </span>
                         </td>
                         <td className="py-4 text-flora-100/80 font-medium">
-                          مناسب کافه‌ها و شرکت‌های کوچک
+                          ایده‌آل برای کافه‌ها، رستوران‌های کوچک و دفاتر
                         </td>
                       </tr>
                       <tr className="transition-colors hover:bg-white/5">
@@ -286,7 +286,7 @@ export default function LandingPageView({
                           </span>
                         </td>
                         <td className="py-4 text-flora-100/80 font-medium">
-                          مناسب پروژه‌های بزرگ و عمده
+                          مناسب برای استارتاپ‌ها و مجموعه‌های در حال رشد
                         </td>
                       </tr>
                     </tbody>
@@ -303,7 +303,7 @@ export default function LandingPageView({
                     href="#wholesale-inquiry"
                     className="group inline-flex w-full items-center justify-between rounded-xl border border-flora-300/35 bg-white/5 hover:bg-white/10 px-4 py-3 text-xs sm:text-sm font-bold text-white transition-all duration-200 hover:border-flora-300 dark:border-dust-50/20 dark:hover:border-flora-300"
                   >
-                    <span>خرید تعداد بالا دارید؟ با ما تماس بگیرید.</span>
+                    <span>پروژه بزرگ، هتل یا نیاز سازمانی دارید؟ استعلام اختصاصی B2B</span>
                     <span
                       aria-hidden="true"
                       className="transition-transform duration-200 group-hover:-translate-x-1 text-flora-300 font-bold"

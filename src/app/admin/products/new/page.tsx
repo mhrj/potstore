@@ -94,6 +94,7 @@ export default async function NewProductPage() {
               { minQuantity: 5, unitPriceToman: 127500, label: 'بسته‌ای' },
               { minQuantity: 20, unitPriceToman: 105000, label: 'عمده' },
             ],
+            variants: [],
           }}
         />
       </div>

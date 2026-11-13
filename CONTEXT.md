@@ -127,4 +127,39 @@ Recommends potting soil when browsing a pot.
   - Create `src/features/recommendations/components/RelatedProducts.tsx` with accessible tabs («محصولات مشابه», «تکمیل‌کننده», «خریداران دیگر خریده‌اند») and empty-tab hiding.
   - Query recommendations in `src/app/products/[slug]/page.tsx` and render `ProductCard` items.
 
+---
+
+## 6. Product Variants (تنوع‌های محصول) Architecture & Decisions
+
+### A. Grilling Decisions & Resolution
+1. **Scope & Independence**:
+   - Applies **exclusively to regular products** (`bundleSize === 1`).
+   - Bundle products (`bundleSize > 1`, `bundleItems`, `minOrderQuantity`) remain 100% untouched and independent.
+2. **Variant Definition & Attributes**:
+   - `ProductVariant` supports a flexible Persian title (e.g. «سایز ۱۵», «سایز ۲۰», «سفید - بزرگ») with optional JSON attributes (dimensions/color).
+   - Each variant has its own `priceToman`, `stock`, optional `sku`, and `attributes`.
+3. **Tiered Pricing Interaction**:
+   - Proportional scaling: The selected variant's `priceToman` acts as its base price. Tier volume discounts (`PriceTier`) apply proportionally to the variant price (e.g. 15% off at 5+ units reduces a 100,000 variant to 85,000 and a 200,000 variant to 170,000).
+4. **Base Price Behavior**:
+   - `basePriceToman` in catalog and card views acts as the "Starting from" (شروع از) price, dynamically synced to the lowest active variant price when variants are configured.
+
+### B. Vertical Slices Breakdown
+- **Slice 1: Schema & Data Model**
+  - Model `ProductVariant`: `id`, `productId`, `title`, `priceToman`, `stock`, `sku`, `attributes`, timestamps.
+  - Model `CartItem`: add `variantId` and `variantTitle`.
+  - Model `OrderItem`: add snapshot fields `variantId` and `variantTitle`.
+  - Additive `prisma db push` and `prisma generate`.
+- **Slice 2: Pricing Logic & TDD Unit Tests**
+  - Unit tests in `tests/variant-pricing.test.ts` verifying that choosing a variant updates line pricing and scales volume tiers proportionally.
+  - Update `src/lib/pricing.ts` and `src/lib/cart.ts` to price variant lines using `variant.priceToman`.
+- **Slice 3: Admin UI & API**
+  - Add "تنوع‌های محصول" (Product Variants) manager in `src/features/admin/components/ProductForm.tsx` (visible only when `bundleSize === 1`).
+  - Update admin API handlers (`src/app/api/admin/products/route.ts` and `[id]/route.ts`) to validate and persist variants.
+- **Slice 4: Product Page UI**
+  - In `ProductDetailView.tsx` and `TieredPricing.tsx`, render interactive variant selector pills.
+  - Recalculate displayed price, live tier matrix, and cart submission payload when a variant is chosen.
+- **Slice 5: Cart & Checkout Integration**
+  - Update `CartItemRow.tsx` and checkout flow to display the chosen variant title and compute totals from the variant price.
+
+
 

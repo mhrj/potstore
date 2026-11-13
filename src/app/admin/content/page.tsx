@@ -24,17 +24,17 @@ const CONTENT_SECTIONS = [
     ],
   },
   {
-    title: 'بخش سفارش عمده و همکاری (Promotional & Wholesale)',
-    description: 'عنوان و توضیحات بخش سفارش عمده برای کافه‌ها، پروژه‌ها و خریداران سازمانی.',
+    title: 'بخش خرید هوشمندانه و تخفیف پلکانی (Smart Shopping & Tiers)',
+    description: 'عنوان و توضیحات بخش خرید با تخفیف خودکار پلکانی برای کافه‌ها، دفاتر و خانه‌ها.',
     blocks: [
       {
         key: 'promo_title' as const,
-        label: 'عنوان بخش سفارش عمده',
+        label: 'عنوان بخش خرید هوشمندانه و تخفیف پلکانی',
         multiline: false,
       },
       {
         key: 'promo_subtitle' as const,
-        label: 'توضیحات بخش سفارش عمده و شرایط همکاری',
+        label: 'توضیحات بخش خرید هوشمندانه و نحوه محاسبه تخفیف',
         multiline: true,
         rows: 3,
       },

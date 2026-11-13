@@ -16,6 +16,7 @@ export default async function EditProductPage({ params }: Props) {
       images: { orderBy: { sortOrder: 'asc' } },
       tiers: { orderBy: { minQuantity: 'asc' } },
       tags: { select: { tagId: true } },
+      variants: { orderBy: { priceToman: 'asc' } },
     },
   });
   if (!product) notFound();
@@ -109,6 +110,13 @@ export default async function EditProductPage({ params }: Props) {
               minQuantity: t.minQuantity,
               unitPriceToman: t.unitPriceToman,
               label: t.label ?? '',
+            })),
+            variants: product.variants.map((v) => ({
+              id: v.id,
+              title: v.title,
+              priceToman: v.priceToman,
+              stock: v.stock,
+              sku: v.sku ?? '',
             })),
           }}
         />

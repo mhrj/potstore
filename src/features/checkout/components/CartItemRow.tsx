@@ -27,16 +27,19 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
     return Math.max(step, Math.min(maxQty, multiple));
   };
 
+  const itemEndpoint =
+    '/api/cart/' + line.productId + (line.variantId ? `?variantId=${encodeURIComponent(line.variantId)}` : '');
+
   const update = (next: number) => {
     const clamped = clamp(next);
     if (clamped === qty) return;
     setQty(clamped);
     setError(null);
     startTransition(async () => {
-      const res = await fetch('/api/cart/' + line.productId, {
+      const res = await fetch(itemEndpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: clamped }),
+        body: JSON.stringify({ quantity: clamped, variantId: line.variantId }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -52,7 +55,7 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
     setIsConfirmOpen(false);
     setError(null);
     startTransition(async () => {
-      const res = await fetch('/api/cart/' + line.productId, { method: 'DELETE' });
+      const res = await fetch(itemEndpoint, { method: 'DELETE' });
       if (!res.ok) {
         setError('حذف ناموفق بود');
         return;
@@ -92,6 +95,11 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h2 className="font-bold text-soil-900 dark:text-dust-50">{line.name}</h2>
+              {line.variantTitle && (
+                <span className="text-xs font-bold text-flora-800 dark:text-flora-200 bg-flora-100/80 dark:bg-flora-900/80 px-2.5 py-0.5 rounded-lg border border-flora-300/40 dark:border-flora-700/40">
+                  {line.variantTitle}
+                </span>
+              )}
               <ItemColorBadge colorData={line.colorData} />
               {line.colorAdjustment !== 0 && (
                 <span className="text-[11px] font-bold text-flora-700 dark:text-flora-400 bg-flora-50 dark:bg-flora-950/60 px-2 py-0.5 rounded-md border border-flora-500/20">

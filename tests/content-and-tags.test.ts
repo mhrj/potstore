@@ -27,6 +27,21 @@ test('DEFAULT_CONTENT has required business fields with Persian defaults', () =>
   }
 });
 
+test('DEFAULT_CONTENT promo copy reflects tiered pricing for SMB/homes and does not use wholesale terminology', () => {
+  assert.equal(
+    DEFAULT_CONTENT.promo_title,
+    'خرید هوشمندانه برای کافه‌ها، دفاتر و خانه‌ها',
+  );
+  assert.ok(
+    DEFAULT_CONTENT.promo_subtitle.includes('نیازی به ثبت درخواست سازمانی ندارید'),
+    'promo_subtitle should reassure retail/SMB buyers that corporate inquiry is not needed',
+  );
+  assert.ok(
+    !DEFAULT_CONTENT.promo_title.includes('عمده'),
+    'promo_title should not use wholesale (عمده) terminology',
+  );
+});
+
 test('tag slug generation preserves Persian letters and numbers', () => {
   const slugify = (value: string) =>
     value

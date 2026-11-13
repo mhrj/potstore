@@ -70,18 +70,18 @@ export default function WholesaleInquiryForm() {
                 🏢 بخش همکاری سازمانی و B2B
               </span>
               <h2 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">
-                تأمین عمده برای گلخانه‌ها، کافه‌ها، هتل‌ها و شرکت‌ها
+                تأمین تخصصی برای هتل‌ها، پروژه‌های تجاری و برندها
               </h2>
               <p className="mt-5 text-sm leading-8 text-flora-100/85 sm:text-base">
-                اگر قصد تجهیز یک پروژه بزرگ را دارید یا به <strong className="font-bold text-white">فاکتور رسمی و قرارداد سازمانی</strong> نیاز دارید، فرم زیر را تکمیل کنید تا کارشناسان ما بهترین شرایط را به شما ارائه دهند.
+                برنامه‌ریزی برای تجهیز یک هتل، کافه زنجیره‌ای یا پروژه بزرگ مسکونی دارید؟ کارشناسان ما با ارائه فاکتور رسمی، قرارداد سازمانی و مشاوره اختصاصی، بهترین شرایط را برای شما مهیا می‌کنند.
               </p>
 
               <div className="mt-8 space-y-3.5">
                 {[
-                  'تولید سفارشی با پالت رنگ و لعاب مدنظر شما',
-                  'پالت‌بندی چوبی استاندارد برای حمل ایمن بین‌شهری',
-                  'صدور پیش‌فاکتور رسمی و امکان پرداخت دو مرحله‌ای',
-                  'ارسال نمونه رایگان برای پروژه‌های با تیراژ بالا',
+                  'تولید سفارشی با پالت رنگ و لعاب اختصاصی',
+                  'بسته‌بندی و لجستیک تخصصی برای پروژه‌های بزرگ',
+                  'امکان عقد قرارداد رسمی و پرداخت مرحله‌ای',
+                  'ارسال نمونه رایگان برای تأیید کیفیت (Tier بالای پروژه‌ها)',
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-3 text-xs sm:text-sm text-flora-100/90">
                     <span className="grid size-5 shrink-0 place-items-center rounded-full bg-flora-500/30 text-flora-300">
@@ -182,7 +182,7 @@ export default function WholesaleInquiryForm() {
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
                         <label htmlFor="wholesale-business-name" className="block text-xs font-medium text-flora-100/90 mb-1.5">
-                          نام کسب‌وکار یا برند (اختیاری)
+                          نام شرکت یا مجموعه (اختیاری)
                         </label>
                         <input
                           id="wholesale-business-name"
@@ -190,14 +190,14 @@ export default function WholesaleInquiryForm() {
                           type="text"
                           value={formData.businessName}
                           onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                          placeholder="کافه، گلخانه، شرکت..."
+                          placeholder="نام شرکت، هتل، کافه زنجیره‌ای یا سازمان..."
                           className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-flora-300 focus:bg-white/10 focus:outline-none transition"
                         />
                       </div>
 
                       <div>
                         <label htmlFor="wholesale-estimated-qty" className="block text-xs font-medium text-flora-100/90 mb-1.5">
-                          تیراژ تقریبی مدنظر
+                          حجم تقریبی سفارش
                         </label>
                         <select
                           id="wholesale-estimated-qty"
@@ -206,7 +206,7 @@ export default function WholesaleInquiryForm() {
                           onChange={(e) => setFormData({ ...formData, estimatedQty: e.target.value })}
                           className="w-full rounded-xl border border-white/20 bg-flora-950 px-3.5 py-2.5 text-xs text-white focus:border-flora-300 focus:outline-none transition"
                         >
-                          <option value="۲۰ تا ۵۰ عدد">۲۰ تا ۵۰ عدد (تخفیف اولیه)</option>
+                          <option value="۲۰ تا ۵۰ عدد">۲۰ تا ۵۰ عدد (حجم تقریبی سفارش)</option>
                           <option value="۵۰ تا ۱۰۰ عدد">۵۰ تا ۱۰۰ عدد (تخفیف همکار)</option>
                           <option value="۱۰۰ تا ۵۰۰ عدد">۱۰۰ تا ۵۰۰ عدد (تخفیف ویژه کارگاهی)</option>
                           <option value="بیش از ۵۰۰ عدد">بیش از ۵۰۰ عدد (تولید اختصاصی)</option>
@@ -216,7 +216,7 @@ export default function WholesaleInquiryForm() {
 
                     <div>
                       <label htmlFor="wholesale-message" className="block text-xs font-medium text-flora-100/90 mb-1.5">
-                        توضیحات یا مدل‌های مدنظر (اختیاری)
+                        شرح پروژه یا نیاز سازمانی (اختیاری)
                       </label>
                       <textarea
                         id="wholesale-message"
@@ -224,7 +224,7 @@ export default function WholesaleInquiryForm() {
                         rows={2}
                         value={formData.message}
                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                        placeholder="سایز، رنگ یا هر نکته دیگری که برای ما مهم است..."
+                        placeholder="سایز، رنگ، کاربری پروژه یا هر نیاز اختصاصی دیگر..."
                         className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2 text-xs text-white placeholder-white/40 focus:border-flora-300 focus:bg-white/10 focus:outline-none transition resize-none"
                       />
                     </div>

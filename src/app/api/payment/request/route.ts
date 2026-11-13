@@ -56,6 +56,16 @@ export async function POST(req: Request) {
     select: {
       id: true,
       productId: true,
+      variantId: true,
+      variantTitle: true,
+      variant: {
+        select: {
+          id: true,
+          title: true,
+          priceToman: true,
+          stock: true,
+        },
+      },
       quantity: true,
       colorData: true,
       selectedColorHex: true,
@@ -104,7 +114,15 @@ export async function POST(req: Request) {
   const shortages: Array<{ name: string; available: number }> = [];
 
   for (const i of activeItems) {
-    if (i.quantity > i.product.stock) {
+    if (i.variantId && i.variant) {
+      if (i.quantity > i.variant.stock) {
+        shortages.push({
+          name: `${i.product.name} (${i.variantTitle ?? i.variant.title})`,
+          available: i.variant.stock,
+        });
+        continue;
+      }
+    } else if (i.quantity > i.product.stock) {
       shortages.push({ name: i.product.name, available: i.product.stock });
       continue;
     }
@@ -194,6 +212,9 @@ export async function POST(req: Request) {
       quantity: i.quantity,
       colorData: i.colorData,
       colorAdjustment: i.colorAdjustment ?? 0,
+      variantId: i.variantId,
+      variantTitle: i.variantTitle ?? i.variant?.title,
+      variantPriceToman: i.variant?.priceToman,
     })),
   );
 
@@ -255,7 +276,13 @@ export async function POST(req: Request) {
       shipLine2: address.line2,
       items: {
         create: totals.lines.map((l, idx) => {
-          const cartItem = activeItems[idx] ?? activeItems.find((ai) => ai.product.id === l.productId);
+          const cartItem =
+            activeItems[idx] ??
+            activeItems.find(
+              (ai) =>
+                ai.productId === l.productId &&
+                (l.variantId ? ai.variantId === l.variantId : true),
+            );
           const isBundle = (l.bundleSize ?? 1) > 1;
           const rawColorData = (l.colorData ?? cartItem?.colorData ?? null) as Record<string, unknown> | null;
 
@@ -282,6 +309,8 @@ export async function POST(req: Request) {
 
           return {
             productId: l.productId,
+            variantId: l.variantId ?? cartItem?.variantId ?? null,
+            variantTitle: l.variantTitle ?? cartItem?.variantTitle ?? null,
             productName: l.name,
             productSlug: l.slug,
             sku: l.sku ?? cartItem?.product.sku ?? null,

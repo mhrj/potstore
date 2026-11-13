@@ -13,6 +13,7 @@ const colorOptionSchema = z.object({
 
 const addSchema = z.object({
   productId: z.string().cuid(),
+  variantId: z.string().cuid().optional().nullable(),
   quantity: z.coerce.number().int().min(1).max(5000),
   color: z.union([z.string(), colorOptionSchema]).optional().nullable(),
   selectedColor: colorOptionSchema.optional().nullable(),
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
       colorData,
       colorHex,
       parsed.data.colorAdjustment,
+      parsed.data.variantId,
     );
     const totals = await getCartTotals(session.sub);
     return NextResponse.json({ ok: true, totals });

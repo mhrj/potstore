@@ -21,6 +21,53 @@ export function parseFeatures(raw: unknown): ProductFeature[] {
 
 export type ColorOption = { hexCode: string; stock: number; priceAdjustment: number; name?: string };
 
+export type ProductVariantItem = {
+  id?: string;
+  title: string;
+  priceToman: number;
+  stock: number;
+  sku?: string | null;
+  attributes?: Record<string, unknown> | null;
+};
+
+export function parseProductVariants(raw: unknown): ProductVariantItem[] {
+  if (!Array.isArray(raw)) return [];
+  const items: ProductVariantItem[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) continue;
+    const rec = item as Record<string, unknown>;
+    const title = typeof rec.title === 'string' ? rec.title.trim() : '';
+    const priceToman =
+      typeof rec.priceToman === 'number' && Number.isFinite(rec.priceToman)
+        ? Math.max(0, Math.round(rec.priceToman))
+        : 0;
+    const stock =
+      typeof rec.stock === 'number' && Number.isFinite(rec.stock)
+        ? Math.max(0, Math.round(rec.stock))
+        : 0;
+    const sku = typeof rec.sku === 'string' && rec.sku.trim() ? rec.sku.trim() : null;
+    const attributes =
+      typeof rec.attributes === 'object' && rec.attributes !== null
+        ? (rec.attributes as Record<string, unknown>)
+        : null;
+
+    if (!title || priceToman <= 0) continue;
+
+    const variant: ProductVariantItem = {
+      title,
+      priceToman,
+      stock,
+      sku,
+      attributes,
+    };
+    if (typeof rec.id === 'string') {
+      variant.id = rec.id;
+    }
+    items.push(variant);
+  }
+  return items;
+}
+
 export type BundleItem = {
   title: string;
   description?: string;

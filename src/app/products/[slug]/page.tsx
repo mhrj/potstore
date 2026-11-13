@@ -77,6 +77,17 @@ export default async function ProductPage({ params }: Params) {
         minOrderQuantity: true,
         allowBatchDiscount: true,
         features: true,
+        variants: {
+          orderBy: { priceToman: 'asc' },
+          select: {
+            id: true,
+            title: true,
+            priceToman: true,
+            stock: true,
+            sku: true,
+            attributes: true,
+          },
+        },
         images: {
           orderBy: { sortOrder: 'asc' },
           select: { id: true, url: true, alt: true },

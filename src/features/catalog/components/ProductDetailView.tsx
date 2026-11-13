@@ -29,6 +29,14 @@ type ProductDetailViewProps = {
     bundleSize: number;
     bundleItems: unknown;
     colorOptions: unknown;
+    variants?: {
+      id: string;
+      title: string;
+      priceToman: number;
+      stock: number;
+      sku: string | null;
+      attributes: unknown;
+    }[];
     minOrderQuantity: number;
     allowBatchDiscount: boolean;
     features: unknown;
@@ -74,6 +82,11 @@ export default function ProductDetailView({
     product.salePriceToman > 0 &&
     product.salePriceToman < product.basePriceToman;
   const effectiveBasePrice = hasSale ? product.salePriceToman! : product.basePriceToman;
+  const hasVariants = !isBundle && Boolean(product.variants && product.variants.length > 0);
+  const startingPrice = hasVariants ? product.variants![0].priceToman : effectiveBasePrice;
+  const totalStock = hasVariants
+    ? product.variants!.reduce((sum, v) => sum + v.stock, 0)
+    : product.stock;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -85,11 +98,11 @@ export default function ProductDetailView({
     offers: {
       '@type': 'AggregateOffer',
       priceCurrency: 'IRR',
-      lowPrice: Math.min(product.tiers.at(-1)?.unitPriceToman ?? effectiveBasePrice, effectiveBasePrice) * 10,
-      highPrice: effectiveBasePrice * 10,
+      lowPrice: Math.min(product.tiers.at(-1)?.unitPriceToman ?? startingPrice, startingPrice) * 10,
+      highPrice: startingPrice * 10,
       offerCount: product.tiers.length || 1,
       availability:
-        product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        totalStock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
     },
   };
 
@@ -186,8 +199,13 @@ export default function ProductDetailView({
                   {entry.tag.name}
                 </Link>
               ))}
+              {hasVariants && (
+                <span className="rounded-full bg-flora-100 text-flora-800 dark:bg-flora-900/80 dark:text-flora-300 border border-flora-300/40 dark:border-flora-500/50 px-3 py-1 text-xs font-bold">
+                  {toFa(product.variants!.length)} مدل / سایز مختلف
+                </span>
+              )}
               <span className="rounded-full bg-dust-100 dark:bg-flora-900/60 px-3 py-1 text-xs font-bold text-soil-700 dark:text-dust-200">
-                موجودی: {toFa(product.stock)} عدد
+                موجودی: {toFa(totalStock)} عدد
               </span>
             </div>
 
@@ -204,6 +222,7 @@ export default function ProductDetailView({
                   bundleSize: product.bundleSize,
                   bundleItems: bundleItems,
                   colorOptions: parseColorOptions(product.colorOptions, product.stock),
+                  variants: product.variants,
                   minOrderQuantity: product.minOrderQuantity,
                   allowBatchDiscount: product.allowBatchDiscount,
                 }}

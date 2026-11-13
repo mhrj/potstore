@@ -8,6 +8,7 @@ export const runtime = 'nodejs';
 
 const patchSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(5000),
+  variantId: z.string().optional().nullable(),
 });
 
 type Params = { params: Promise<{ productId: string }> };
@@ -18,11 +19,14 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json({ message: 'ابتدا وارد شوید' }, { status: 401 });
   }
   const { productId } = await params;
+  const url = new URL(req.url);
+  const variantIdParam = url.searchParams.get('variantId');
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ message: 'تعداد نامعتبر' }, { status: 400 });
   }
+  const variantId = parsed.data.variantId ?? variantIdParam ?? null;
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -35,6 +39,15 @@ export async function PATCH(req: Request, { params }: Params) {
   });
   if (!product || !product.isActive) {
     return NextResponse.json({ message: 'محصول یافت نشد' }, { status: 404 });
+  }
+
+  let availableStock = product.stock;
+  if (variantId) {
+    const v = await prisma.productVariant.findFirst({
+      where: { id: variantId, productId },
+      select: { stock: true },
+    });
+    if (v) availableStock = v.stock;
   }
 
   const bundleSize = product.bundleSize || 1;
@@ -57,15 +70,19 @@ export async function PATCH(req: Request, { params }: Params) {
     );
   }
 
-  if (product.stock < parsed.data.quantity) {
+  if (availableStock < parsed.data.quantity) {
     return NextResponse.json(
-      { message: 'حداکثر موجودی: ' + product.stock + ' عدد' },
+      { message: 'حداکثر موجودی: ' + availableStock + ' عدد' },
       { status: 409 },
     );
   }
 
   const updated = await prisma.cartItem.updateMany({
-    where: { userId: session.sub, productId },
+    where: {
+      userId: session.sub,
+      productId,
+      variantId: variantId ? variantId : null,
+    },
     data: { quantity: parsed.data.quantity },
   });
   if (updated.count === 0) {
@@ -76,15 +93,21 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json({ ok: true, totals });
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ message: 'ابتدا وارد شوید' }, { status: 401 });
   }
   const { productId } = await params;
+  const url = new URL(req.url);
+  const variantId = url.searchParams.get('variantId') || null;
 
   await prisma.cartItem.deleteMany({
-    where: { userId: session.sub, productId },
+    where: {
+      userId: session.sub,
+      productId,
+      variantId: variantId ? variantId : null,
+    },
   });
 
   const totals = await getCartTotals(session.sub);

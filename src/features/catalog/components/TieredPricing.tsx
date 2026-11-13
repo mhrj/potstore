@@ -103,6 +103,14 @@ type Props = {
     bundleSize?: number;
     bundleItems?: BundleItem[] | null;
     colorOptions?: ColorOption[] | null;
+    variants?: Array<{
+      id: string;
+      title: string;
+      priceToman: number;
+      stock: number;
+      sku?: string | null;
+      attributes?: unknown;
+    }>;
     minOrderQuantity?: number;
     allowBatchDiscount?: boolean;
   };
@@ -124,12 +132,32 @@ export default function TieredPricing({
   const isBundle = bundleSize > 1;
   const colorCtx = useProductColor();
 
+  const hasVariants = !isBundle && Boolean(product.variants && product.variants.length > 0);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    hasVariants && product.variants && product.variants.length > 0 ? product.variants[0].id : null,
+  );
+
+  const activeVariant = useMemo(() => {
+    if (!hasVariants || !product.variants) return null;
+    return (
+      product.variants.find((v) => v.id === selectedVariantId) ??
+      product.variants[0] ??
+      null
+    );
+  }, [hasVariants, product.variants, selectedVariantId]);
+
   const minCount = isBundle
     ? Math.max(1, Math.ceil((product.minOrderQuantity || 1) / bundleSize))
     : Math.max(1, product.minOrderQuantity || 1);
 
   const { maxCount, limitingItem } = useMemo(() => {
     if (!isBundle) {
+      if (hasVariants && activeVariant) {
+        return {
+          maxCount: Math.max(0, activeVariant.stock),
+          limitingItem: null,
+        };
+      }
       const singleColors = product.colorOptions ?? [];
       if (singleColors.length > 0 && colorCtx?.selectedColor) {
         const opt = singleColors.find(
@@ -205,6 +233,8 @@ export default function TieredPricing({
     };
   }, [
     isBundle,
+    hasVariants,
+    activeVariant,
     product.bundleItems,
     product.colorOptions,
     product.name,
@@ -263,7 +293,19 @@ export default function TieredPricing({
     }
   }, [isBundle, maxCount, count]);
 
+  useEffect(() => {
+    if (hasVariants && activeVariant) {
+      const currentMax = Math.max(0, activeVariant.stock);
+      if (count > currentMax && currentMax >= minCount) {
+        setCount(currentMax);
+      } else if (count < minCount) {
+        setCount(minCount);
+      }
+    }
+  }, [hasVariants, activeVariant, count, minCount]);
+
   const hasSale =
+    !hasVariants &&
     typeof product.salePriceToman === 'number' &&
     product.salePriceToman > 0 &&
     product.salePriceToman < product.basePriceToman;
@@ -298,7 +340,12 @@ export default function TieredPricing({
     product.bundleItems,
   ]);
 
-  const rawBasePrice = hasSale ? product.salePriceToman! : product.basePriceToman;
+  const rawBasePrice =
+    hasVariants && activeVariant
+      ? activeVariant.priceToman
+      : hasSale
+        ? product.salePriceToman!
+        : product.basePriceToman;
   const effectiveBasePrice = rawBasePrice + totalColorAdjustment;
 
   const sorted = useMemo(
@@ -308,7 +355,9 @@ export default function TieredPricing({
 
   const { packagePrice, unitEquivalent, total, savings, percent, tierLabel, hint } =
     useMemo(() => {
-      const basePackagePrice = product.basePriceToman + totalColorAdjustment;
+      const basePackagePrice =
+        (hasVariants && activeVariant ? activeVariant.priceToman : product.basePriceToman) +
+        totalColorAdjustment;
       if (!allowBatch) {
         const pkgPrice = effectiveBasePrice;
         const tot = pkgPrice * count;
@@ -350,6 +399,8 @@ export default function TieredPricing({
       allowBatch,
       count,
       sorted,
+      hasVariants,
+      activeVariant,
       product.basePriceToman,
       totalColorAdjustment,
       effectiveBasePrice,
@@ -419,6 +470,16 @@ export default function TieredPricing({
         bundleColorsData = bundleObj;
       }
     } else {
+      if (hasVariants) {
+        if (!activeVariant) {
+          setError('لطفاً یک مدل یا سایز انتخاب کنید.');
+          return;
+        }
+        if (activeVariant.stock < count) {
+          setError(`موجودی مدل «${activeVariant.title}» برای این تعداد کافی نیست.`);
+          return;
+        }
+      }
       if (singleColors.length > 0) {
         if (!colorCtx?.selectedColor) {
           setError('لطفاً رنگ مورد نظر خود را انتخاب کنید.');
@@ -442,6 +503,7 @@ export default function TieredPricing({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId: product.id,
+          variantId: hasVariants && activeVariant ? activeVariant.id : undefined,
           quantity: totalUnits,
           color: selectedColorObj ? selectedColorObj.hexCode : undefined,
           selectedColor: selectedColorObj,
@@ -461,6 +523,9 @@ export default function TieredPricing({
 
   function isBundleAvailable(): boolean {
     if (!isBundle) {
+      if (hasVariants && activeVariant) {
+        return activeVariant.stock >= count;
+      }
       const singleColors = product.colorOptions ?? [];
       if (singleColors.length > 0) {
         if (!colorCtx?.selectedColor) {
@@ -507,10 +572,75 @@ export default function TieredPricing({
 
   const outOfStock = isBundle
     ? !isBundleAvailable() || maxCount < minCount
-    : !isBundleAvailable() || product.stock <= 0 || maxCount < minCount;
+    : hasVariants && activeVariant
+      ? activeVariant.stock <= 0 || maxCount < minCount || count > activeVariant.stock
+      : !isBundleAvailable() || product.stock <= 0 || maxCount < minCount;
 
   return (
     <div className="space-y-6">
+      {/* For regular products: Variant pills selector if variants exist */}
+      {hasVariants && product.variants && product.variants.length > 0 && (
+        <div className="rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-black text-soil-900 dark:text-dust-50">
+              انتخاب سایز / مدل
+            </h3>
+            {activeVariant && (
+              <span className="text-xs text-soil-700/70 dark:text-dust-200/70 font-medium">
+                موجودی: {toFa(activeVariant.stock)} عدد
+              </span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2.5 pt-1">
+            {product.variants.map((v) => {
+              const isSelected = v.id === activeVariant?.id;
+              const isOutOfStock = v.stock <= 0;
+              return (
+                <button
+                  key={v.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedVariantId(v.id);
+                    setError(null);
+                    setLimitError(false);
+                  }}
+                  aria-pressed={isSelected}
+                  aria-label={`${v.title} - ${formatToman(v.priceToman)} تومان${isOutOfStock ? ' (ناموجود)' : ''}`}
+                  className={`group relative flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs transition-all ${
+                    isSelected
+                      ? 'border-flora-600 bg-flora-50/80 dark:bg-flora-950/80 dark:border-flora-500 shadow-xs ring-1 ring-flora-600 dark:ring-flora-500'
+                      : 'border-soil-900/10 dark:border-dust-50/10 bg-dust-50/50 dark:bg-flora-950/40 hover:border-soil-900/25 dark:hover:border-dust-50/30'
+                  } ${isOutOfStock ? 'opacity-55' : ''}`}
+                >
+                  <span
+                    className={`size-2 shrink-0 rounded-full ${
+                      isSelected
+                        ? 'bg-flora-600 dark:bg-flora-400'
+                        : isOutOfStock
+                          ? 'bg-red-400'
+                          : 'bg-soil-400 dark:bg-dust-400'
+                    }`}
+                  />
+                  <span className="font-bold text-soil-900 dark:text-dust-50 text-sm">
+                    {v.title}
+                  </span>
+                  <span className="font-bold text-flora-800 dark:text-flora-300 mr-1.5">
+                    {formatToman(v.priceToman)}
+                    <span className="text-[10px] font-normal text-soil-700/70 dark:text-dust-200/70 mr-1">
+                      تومان
+                    </span>
+                  </span>
+                  {isOutOfStock && (
+                    <span className="rounded-full bg-red-100 dark:bg-red-950/60 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+                      ناموجود
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {/* For bundles: Swatches for each bundle item before pricing & quantity */}
       {isBundle &&
         product.bundleItems &&
@@ -674,7 +804,9 @@ export default function TieredPricing({
                   (i === sorted.length - 1 || count < sorted[i + 1].minQuantity);
                 const tierResolved = resolveTier(sorted, t.minQuantity, effectiveBasePrice, product.basePriceToman);
                 const tierUnitPrice = tierResolved.unitPriceToman;
-                const baseRefPrice = product.basePriceToman + totalColorAdjustment;
+                const baseRefPrice =
+                  (hasVariants && activeVariant ? activeVariant.priceToman : product.basePriceToman) +
+                  totalColorAdjustment;
                 const off =
                   baseRefPrice > 0
                     ? Math.round(
@@ -877,7 +1009,11 @@ export default function TieredPricing({
         <dl className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <dt className="text-soil-700/70 dark:text-dust-200/70">
-              {isBundle ? 'قیمت پکیج (در این پله)' : 'قیمت هر عدد'}
+              {isBundle
+                ? 'قیمت پکیج (در این پله)'
+                : hasVariants && activeVariant
+                  ? `قیمت (${activeVariant.title})`
+                  : 'قیمت هر عدد'}
             </dt>
             <dd className="mt-1">
               {hasSale && (
@@ -1146,7 +1282,9 @@ export default function TieredPricing({
           className="w-full rounded-2xl bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-4 text-sm font-black shadow-lg shadow-flora-900/20 transition-colors hover:bg-flora-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {outOfStock
-            ? 'این محصول موقتاً تمام شده است'
+            ? hasVariants
+              ? 'این مدل موقتاً تمام شده است'
+              : 'این محصول موقتاً تمام شده است'
             : pending
               ? 'در حال افزودن…'
               : added

@@ -37,7 +37,11 @@ export default function CartView({ totals, stockMap }: CartViewProps) {
       <div className="mt-8 grid gap-8 lg:grid-cols-12">
         <ul className="space-y-4 lg:col-span-8">
           {totals.lines.map((l) => (
-            <CartItemRow key={l.productId} line={l} stock={stockMap[l.productId] ?? 0} />
+            <CartItemRow
+              key={`${l.productId}-${l.variantId ?? 'default'}`}
+              line={l}
+              stock={stockMap[l.productId] ?? 0}
+            />
           ))}
         </ul>
 

@@ -55,6 +55,15 @@ const bundleItemSchema = z.object({
   colorOptions: z.array(colorOptionSchema).optional().default([]),
 });
 
+const variantSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().min(1, 'عنوان تنوع الزامی است').max(100),
+  priceToman: z.number({ invalid_type_error: 'قیمت تنوع باید عدد باشد' }).int().min(1000, 'قیمت تنوع حداقل ۱,۰۰۰ تومان است'),
+  stock: z.number({ invalid_type_error: 'موجودی تنوع باید عدد باشد' }).int().min(0, 'موجودی تنوع نمی‌تواند منفی باشد'),
+  sku: z.string().max(60).optional().nullable(),
+  attributes: z.record(z.string(), z.unknown()).optional().nullable(),
+});
+
 const schema = z.object({
   slug: z.string({ required_error: 'اسلاگ الزامی است' }).min(2, 'اسلاگ باید حداقل ۲ کاراکتر باشد').max(120, 'اسلاگ حداکثر ۱۲۰ کاراکتر است').regex(/^[a-z0-9-]+$/, 'اسلاگ فقط حروف کوچک، عدد و خط تیره'),
   sku: z.string().max(80, 'کد کالا حداکثر ۸۰ کاراکتر است').optional().nullable().or(z.literal('')),
@@ -93,6 +102,7 @@ const schema = z.object({
   images: z.array(persistedImageUrlSchema, { required_error: 'حداقل یک تصویر الزامی است' }).min(1, 'حداقل یک تصویر الزامی است').max(10, 'حداکثر ۱۰ تصویر مجاز است'),
   tagIds: z.array(z.string().cuid('شناسه برچسب نامعتبر است')).max(20, 'حداکثر ۲۰ برچسب مجاز است').optional().default([]),
   tiers: tiersSchema,
+  variants: z.array(variantSchema).optional().default([]),
 }).refine(
   (data) => !data.salePriceToman || data.salePriceToman < data.basePriceToman,
   {
@@ -172,6 +182,15 @@ export async function POST(req: Request) {
       },
       tags: {
         create: data.tagIds.map((tagId) => ({ tagId })),
+      },
+      variants: {
+        create: data.variants.map((v) => ({
+          title: v.title,
+          priceToman: v.priceToman,
+          stock: v.stock,
+          sku: v.sku || null,
+          attributes: v.attributes ? (v.attributes as Prisma.InputJsonValue) : Prisma.JsonNull,
+        })),
       },
     },
   });

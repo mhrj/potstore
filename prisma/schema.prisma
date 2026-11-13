@@ -148,6 +148,7 @@ model Product {
   tags          ProductTag[]
   cartItems     CartItem[]
   orderItems    OrderItem[]
+  variants      ProductVariant[]
   relationsFrom ProductRelation[] @relation("RelationsFrom")
   relationsTo   ProductRelation[] @relation("RelationsTo")
 
@@ -260,26 +261,49 @@ model ProductRelation {
   @@index([toId])
 }
 
+// Product variants (e.g., sizes, dimensions, colors for regular products)
+model ProductVariant {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title       String
+  priceToman  Int
+  stock       Int      @default(0)
+  sku         String?
+  attributes  Json?
+
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([productId])
+}
+
 // ---------------------------------------------------------------
 // Cart
 // ---------------------------------------------------------------
 
 model CartItem {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  productId String
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int      @default(1)
-  colorData Json?
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId        String
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId        String?
+  variant          ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  variantTitle     String?
+  quantity         Int             @default(1)
+  colorData        Json?
   selectedColorHex String?
-  colorAdjustment  Int      @default(0)
+  colorAdjustment  Int             @default(0)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  @@unique([userId, productId])
-  @@index([userId])
+  @@index([userId, productId])
+  @@index([variantId])
 }
 
 // ---------------------------------------------------------------
@@ -354,6 +378,10 @@ model OrderItem {
   material      String?
   diameterCm    Float?
   heightCm      Float?
+
+  variantId     String?
+  variant       ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  variantTitle  String?
 
   quantity         Int
   listUnitToman    Int

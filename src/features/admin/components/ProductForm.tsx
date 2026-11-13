@@ -11,6 +11,14 @@ import ConfirmModal from '@/components/ui/ConfirmModal';
 
 type Tier = { minQuantity: number; unitPriceToman: number; label: string };
 
+export type ProductVariantFormItem = {
+  id?: string;
+  title: string;
+  priceToman: number;
+  stock: number;
+  sku?: string | null;
+};
+
 export type ProductFormData = {
   id?: string;
   slug: string;
@@ -40,6 +48,7 @@ export type ProductFormData = {
   images: string[];
   tagIds: string[];
   tiers: Tier[];
+  variants?: ProductVariantFormItem[];
 };
 
 const inputCls =
@@ -106,6 +115,7 @@ export default function ProductForm({
     allowBatchDiscount: initial.allowBatchDiscount ?? true,
     isFragile: initial.isFragile ?? false,
     salePriceToman: initial.salePriceToman ?? null,
+    variants: initial.variants ?? [],
   });
 
   const initialIsBundle = Boolean(
@@ -193,6 +203,36 @@ export default function ProductForm({
       ...prev,
       bundleItems: next,
       bundleSize: Math.max(1, next.length),
+    }));
+  }
+
+  function handleAddVariant() {
+    setForm((prev) => ({
+      ...prev,
+      variants: [
+        ...(prev.variants ?? []),
+        {
+          title: '',
+          priceToman: prev.basePriceToman || 100000,
+          stock: 10,
+          sku: '',
+        },
+      ],
+    }));
+  }
+
+  function handleUpdateVariant(index: number, patch: Partial<ProductVariantFormItem>) {
+    setForm((prev) => {
+      const updated = [...(prev.variants ?? [])];
+      updated[index] = { ...updated[index], ...patch };
+      return { ...prev, variants: updated };
+    });
+  }
+
+  function handleRemoveVariant(index: number) {
+    setForm((prev) => ({
+      ...prev,
+      variants: (prev.variants ?? []).filter((_, i) => i !== index),
     }));
   }
 
@@ -491,6 +531,16 @@ export default function ProductForm({
       if (totalValue > 0 && form.basePriceToman > totalValue) {
         newErrors.basePriceToman = 'قیمت فروش پکیج نمی‌تواند بیشتر از مجموع ارزش اقلام باشد';
       }
+    } else if ((form.variants ?? []).length > 0) {
+      for (let i = 0; i < form.variants!.length; i++) {
+        const v = form.variants![i];
+        if (!v.title.trim()) {
+          newErrors[`variant_${i}_title`] = 'عنوان تنوع الزامی است';
+        }
+        if (v.priceToman < 1000) {
+          newErrors[`variant_${i}_price`] = 'قیمت تنوع باید حداقل ۱,۰۰۰ تومان باشد';
+        }
+      }
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -504,9 +554,27 @@ export default function ProductForm({
     startTransition(async () => {
       const isNew = !initial.id;
       const url = isNew ? '/api/admin/products' : '/api/admin/products/' + initial.id;
+
+      const validVariants =
+        !isBundleActive && (form.variants ?? []).length > 0
+          ? form.variants!.filter((v) => v.title.trim() && v.priceToman >= 1000)
+          : [];
+      const minVariantPrice =
+        validVariants.length > 0
+          ? Math.min(...validVariants.map((v) => v.priceToman))
+          : form.basePriceToman;
+
       const payload = {
         ...form,
         sku: form.sku?.trim() || null,
+        basePriceToman: minVariantPrice,
+        variants: validVariants.map((v) => ({
+          id: v.id,
+          title: v.title.trim(),
+          priceToman: v.priceToman,
+          stock: Math.max(0, Math.floor(Number(v.stock)) || 0),
+          sku: v.sku?.trim() || null,
+        })),
         categoryId: form.categoryId || null,
         material: isBundleActive ? (form.material.trim() || 'ترکیبی') : form.material,
         weightGrams: isBundleActive ? bundleWeightSum : form.weightGrams,
@@ -901,6 +969,136 @@ export default function ProductForm({
           </div>
         )}
       </section>
+
+      {/* Product Variants (Sizes / Dimensions) - only for regular products */}
+      {!isBundleActive && (
+        <section className="rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-5 space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-soil-900/10 dark:border-dust-50/10 pb-4">
+            <div>
+              <h2 className="text-sm sm:text-base font-black text-soil-900 dark:text-dust-50">
+                تنوع‌های محصول (سایزها و مدل‌ها)
+              </h2>
+              <p className="mt-1 text-xs text-soil-700/60 dark:text-dust-200/60">
+                اگر این گلدان در چند سایز (مثلاً سایز ۱۵، ۲۰ و ۲۵) با قیمت و موجودی مجزا عرضه می‌شود، آن‌ها را اینجا ثبت کنید.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleAddVariant}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-flora-50 dark:bg-flora-950/60 border border-flora-300/40 dark:border-flora-500/30 px-3.5 py-2 text-xs font-bold text-flora-800 dark:text-flora-200 hover:bg-flora-100 dark:hover:bg-flora-900 transition cursor-pointer"
+            >
+              <span>+ افزودن تنوع جدید</span>
+            </button>
+          </div>
+
+          {(form.variants ?? []).length > 0 ? (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-dust-50 dark:bg-flora-950/60 border border-soil-900/10 dark:border-dust-100/10 p-3 text-xs text-soil-700 dark:text-dust-200 flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  💡 قیمت پایه کاتالوگ به‌صورت خودکار بر اساس کمترین قیمت تنوع‌ها تنظیم می‌شود:
+                </span>
+                <span className="font-bold text-flora-700 dark:text-flora-300">
+                  {formatToman(
+                    Math.min(
+                      ...(form.variants ?? [])
+                        .map((v) => v.priceToman)
+                        .filter((p) => p > 0),
+                    ) || form.basePriceToman
+                  )}{' '}
+                  تومان (شروع از)
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {form.variants!.map((variant, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-xl border border-soil-900/10 dark:border-dust-100/10 bg-dust-50/50 dark:bg-flora-950/40 items-start"
+                  >
+                    <div className="sm:col-span-4">
+                      <label className={labelCls}>عنوان تنوع (مثلاً: سایز ۲۰) *</label>
+                      <input
+                        type="text"
+                        placeholder="مثال: سایز ۱۵ سانتی‌متر"
+                        className={fieldCls(fieldErrors[`variant_${index}_title`])}
+                        value={variant.title}
+                        onChange={(e) => handleUpdateVariant(index, { title: e.target.value })}
+                      />
+                      {fieldErrors[`variant_${index}_title`] && (
+                        <FormError message={fieldErrors[`variant_${index}_title`]} />
+                      )}
+                    </div>
+
+                    <div className="sm:col-span-3">
+                      <label className={labelCls}>قیمت (تومان) *</label>
+                      <input
+                        type="number"
+                        min="1000"
+                        step="1000"
+                        className={fieldCls(fieldErrors[`variant_${index}_price`])}
+                        value={variant.priceToman}
+                        onChange={(e) =>
+                          handleUpdateVariant(index, {
+                            priceToman: Math.max(0, parseInt(e.target.value, 10) || 0),
+                          })
+                        }
+                      />
+                      <span className="mt-1 block text-[11px] text-soil-700/60 dark:text-dust-200/60">
+                        {formatToman(variant.priceToman)} تومان
+                      </span>
+                      {fieldErrors[`variant_${index}_price`] && (
+                        <FormError message={fieldErrors[`variant_${index}_price`]} />
+                      )}
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className={labelCls}>موجودی انبار *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        className={inputCls}
+                        value={variant.stock}
+                        onChange={(e) =>
+                          handleUpdateVariant(index, {
+                            stock: Math.max(0, parseInt(e.target.value, 10) || 0),
+                          })
+                        }
+                      />
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className={labelCls}>کد کالا (SKU)</label>
+                      <input
+                        type="text"
+                        dir="ltr"
+                        placeholder="اختیاری"
+                        className={inputCls}
+                        value={variant.sku ?? ''}
+                        onChange={(e) => handleUpdateVariant(index, { sku: e.target.value })}
+                      />
+                    </div>
+
+                    <div className="sm:col-span-1 flex items-end justify-center pt-6">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveVariant(index)}
+                        className="p-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
+                        title="حذف این تنوع"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-soil-700/60 dark:text-dust-200/60">
+              هنوز تنوعی برای این محصول تعریف نشده است. اگر این محصول تک‌سایز است، نیازی به افزودن تنوع ندارید.
+            </p>
+          )}
+        </section>
+      )}
 
       <section className="rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-5 space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-soil-900/10 dark:border-dust-50/10 pb-4">

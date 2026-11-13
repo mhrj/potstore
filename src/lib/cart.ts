@@ -24,10 +24,20 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
     select: {
       id: true,
       productId: true,
+      variantId: true,
+      variantTitle: true,
       quantity: true,
       colorData: true,
       selectedColorHex: true,
       colorAdjustment: true,
+      variant: {
+        select: {
+          id: true,
+          title: true,
+          priceToman: true,
+          stock: true,
+        },
+      },
       product: {
         select: {
           id: true,
@@ -80,6 +90,9 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
         quantity: i.quantity,
         colorData: i.colorData,
         colorAdjustment: i.colorAdjustment ?? 0,
+        variantId: i.variantId,
+        variantTitle: i.variantTitle ?? i.variant?.title,
+        variantPriceToman: i.variant?.priceToman,
       })),
   );
 }
@@ -91,6 +104,7 @@ export async function addToCart(
   colorData?: Record<string, unknown> | null,
   clientSelectedColorHex?: string | null,
   clientColorAdjustment?: number,
+  variantId?: string | null,
 ) {
   const product = await prisma.product.findFirst({
     where: { id: productId, isActive: true },
@@ -104,6 +118,15 @@ export async function addToCart(
     },
   });
   if (!product) throw new Error('محصول یافت نشد');
+
+  let chosenVariant: { id: string; title: string; priceToman: number; stock: number } | null = null;
+  if (variantId) {
+    chosenVariant = await prisma.productVariant.findFirst({
+      where: { id: variantId, productId },
+      select: { id: true, title: true, priceToman: true, stock: true },
+    });
+    if (!chosenVariant) throw new Error('تنوع انتخابی یافت نشد');
+  }
 
   const bundleSize = product.bundleSize || 1;
   const isBundle = bundleSize > 1;
@@ -119,21 +142,21 @@ export async function addToCart(
     throw new Error(`تعداد سفارش باید مضربی از ${toFa(bundleSize)} باشد`);
   }
 
-  // Validate the resulting line, not just this increment: adding 10 to a cart
-  // that already holds 10 must fail against a stock of 15. Checkout re-checks
-  // stock before creating an order, so this only spares the customer a trip to
-  // the gateway for a basket that cannot be filled — it is not the authority.
-  const existing = await prisma.cartItem.findUnique({
-    where: { userId_productId: { userId, productId } },
-    select: { quantity: true },
+  const existing = await prisma.cartItem.findFirst({
+    where: {
+      userId,
+      productId,
+      variantId: variantId ?? null,
+    },
   });
   const target = (existing?.quantity ?? 0) + quantity;
 
-  if (product.stock < target) {
+  const maxAvailable = chosenVariant ? chosenVariant.stock : product.stock;
+  if (maxAvailable < target) {
     throw new Error(
       existing
-        ? `موجودی کافی نیست — ${toFa(existing.quantity)} عدد در سبد شماست و حداکثر موجودی ${toFa(product.stock)} عدد است`
-        : 'موجودی کافی نیست',
+        ? `موجودی کافی نیست — ${toFa(existing.quantity)} عدد در سبد شماست و حداکثر موجودی ${toFa(maxAvailable)} عدد است`
+        : `موجودی کافی نیست (حداکثر: ${toFa(maxAvailable)} عدد)`,
     );
   }
 
@@ -195,17 +218,25 @@ export async function addToCart(
 
   const jsonColorData = (colorData as Prisma.InputJsonValue) ?? Prisma.JsonNull;
 
-  return prisma.cartItem.upsert({
-    where: { userId_productId: { userId, productId } },
-    update: {
-      quantity: target,
-      selectedColorHex: finalColorHex,
-      colorAdjustment: finalAdjustment,
-      ...(colorData !== undefined ? { colorData: jsonColorData } : {}),
-    },
-    create: {
+  if (existing) {
+    return prisma.cartItem.update({
+      where: { id: existing.id },
+      data: {
+        quantity: target,
+        selectedColorHex: finalColorHex,
+        colorAdjustment: finalAdjustment,
+        variantTitle: chosenVariant?.title ?? existing.variantTitle,
+        ...(colorData !== undefined ? { colorData: jsonColorData } : {}),
+      },
+    });
+  }
+
+  return prisma.cartItem.create({
+    data: {
       userId,
       productId,
+      variantId: variantId ?? null,
+      variantTitle: chosenVariant?.title ?? null,
       quantity: target,
       selectedColorHex: finalColorHex,
       colorAdjustment: finalAdjustment,

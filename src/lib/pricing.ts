@@ -14,6 +14,9 @@ export type Tier = {
 
 export type PricedLine = {
   productId: string;
+  variantId?: string | null;
+  variantTitle?: string | null;
+  variantPriceToman?: number | null;
   slug: string;
   sku?: string | null;
   name: string;
@@ -151,19 +154,40 @@ type PriceInput = {
   quantity: number;
   colorData?: unknown;
   colorAdjustment?: number;
+  variantId?: string | null;
+  variantTitle?: string | null;
+  variantPriceToman?: number | null;
 };
 
-export function priceLine({ product, tiers, quantity, colorData, colorAdjustment = 0 }: PriceInput): PricedLine {
+export function priceLine({
+  product,
+  tiers,
+  quantity,
+  colorData,
+  colorAdjustment = 0,
+  variantId,
+  variantTitle,
+  variantPriceToman,
+}: PriceInput): PricedLine {
   const bundleSize = Math.max(1, product.bundleSize ?? 1);
   const isBundle = bundleSize > 1;
   const qty = Math.max(bundleSize, Math.floor(quantity));
   const allowBatch = product.allowBatchDiscount !== false;
 
+  const hasVariant = typeof variantPriceToman === 'number' && variantPriceToman > 0;
   const hasSale =
+    !hasVariant &&
     typeof product.salePriceToman === 'number' &&
     product.salePriceToman > 0 &&
     product.salePriceToman < product.basePriceToman;
-  const effectiveBasePrice = (hasSale ? product.salePriceToman! : product.basePriceToman) + colorAdjustment;
+
+  const rawBase = hasVariant
+    ? variantPriceToman!
+    : hasSale
+      ? product.salePriceToman!
+      : product.basePriceToman;
+
+  const effectiveBasePrice = rawBase + colorAdjustment;
 
   const bundleCount = isBundle ? Math.max(1, Math.round(qty / bundleSize)) : qty;
   const baseUnitPrice = Math.round(effectiveBasePrice / bundleSize);
@@ -187,6 +211,9 @@ export function priceLine({ product, tiers, quantity, colorData, colorAdjustment
 
     return {
       productId: product.id,
+      variantId: variantId ?? null,
+      variantTitle: variantTitle ?? null,
+      variantPriceToman: variantPriceToman ?? null,
       slug: product.slug,
       name: product.name,
       imageUrl: product.images?.[0]?.url ?? null,
@@ -223,6 +250,9 @@ export function priceLine({ product, tiers, quantity, colorData, colorAdjustment
 
     return {
       productId: product.id,
+      variantId: variantId ?? null,
+      variantTitle: variantTitle ?? null,
+      variantPriceToman: variantPriceToman ?? null,
       slug: product.slug,
       name: product.name,
       imageUrl: product.images?.[0]?.url ?? null,
@@ -257,6 +287,9 @@ export function priceLine({ product, tiers, quantity, colorData, colorAdjustment
 
   return {
     productId: product.id,
+    variantId: variantId ?? null,
+    variantTitle: variantTitle ?? null,
+    variantPriceToman: variantPriceToman ?? null,
     slug: product.slug,
     sku: product.sku ?? null,
     name: product.name,
