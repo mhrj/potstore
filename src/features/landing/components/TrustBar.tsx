@@ -48,7 +48,7 @@ export default function TrustBar({ maxDiscount = 0 }: TrustBarProps) {
   ];
 
   return (
-    <section className="relative -mt-6 mb-16 z-10">
+    <section className="relative -mt-6 mb-16 lg:mb-20 z-10">
       <Container>
         <div className="rounded-3xl border border-soil-900/10 dark:border-dust-100/10 bg-white/80 dark:bg-flora-900/90 p-6 shadow-xl shadow-soil-900/5 dark:shadow-black/20 backdrop-blur-md sm:p-8 lg:p-10">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x-reverse lg:divide-x lg:divide-soil-900/10 dark:lg:divide-dust-100/10">

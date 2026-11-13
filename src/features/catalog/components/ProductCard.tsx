@@ -1,8 +1,11 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { formatToman, toFa } from '@/lib/format';
 import { parseColorOptions, type ColorOption } from '@/lib/product-features';
 import { isUnoptimizedImage } from '@/lib/image-validation';
+import { useReveal } from '@/shared/hooks/useReveal';
 
 export type ProductCardData = {
   id: string;
@@ -54,11 +57,20 @@ export default function ProductCard({ product, className = '' }: Props) {
   const colors: ColorOption[] = !isBundle ? parseColorOptions(product.colorOptions, product.stock) : [];
   const hasMultipleColors = colors.length > 1;
 
+  const { ref } = useReveal<HTMLAnchorElement>();
+
   return (
     <Link
+      ref={ref}
       href={`/products/${product.slug}`}
-      className={`group block rounded-2xl md:rounded-3xl bg-white dark:bg-flora-900 shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-soil-900/5 dark:border-dust-100/10 p-2 sm:p-2.5 ${className}`}
+      className={`reveal group relative block rounded-2xl md:rounded-3xl bg-white dark:bg-flora-900 border border-soil-900/5 dark:border-dust-100/10 p-2 sm:p-2.5 transition-transform duration-300 ease-out hover:-translate-y-0.5 ${className}`}
     >
+      {/* Static Elevation Shadow fading in purely via Opacity (No box-shadow animation) */}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-px rounded-2xl md:rounded-3xl shadow-xl shadow-soil-900/10 dark:shadow-black/40 opacity-0 transition-opacity duration-300 ease-out group-hover:opacity-100 -z-10"
+      />
+
       {/* Product Image Wrapper */}
       <div className="relative aspect-square rounded-xl overflow-hidden border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950">
         {product.images?.[0]?.url && product.images[0].url.trim().length > 0 ? (
@@ -67,7 +79,7 @@ export default function ProductCard({ product, className = '' }: Props) {
             alt={product.images[0].alt ?? product.name}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className={`object-cover transition-transform duration-500 group-hover:scale-105 ${
+            className={`object-cover card-hover-image transition-transform duration-500 ease-out group-hover:scale-[1.03] ${
               soldOut ? 'grayscale opacity-70' : ''
             }`}
             unoptimized={isUnoptimizedImage(product.images[0].url)}

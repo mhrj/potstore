@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import ProductDetailView from '@/features/catalog/components/ProductDetailView';
+import { getProductRecommendations } from '@/features/recommendations/rebuild';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,11 +103,14 @@ export default async function ProductPage({ params }: Params) {
 
   if (!product) notFound();
 
+  const recommendations = await getProductRecommendations(product.id);
+
   return (
     <ProductDetailView
       product={product}
       isAuthed={Boolean(session)}
       globalColors={globalColors}
+      recommendations={recommendations}
     />
   );
 }

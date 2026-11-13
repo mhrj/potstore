@@ -77,7 +77,7 @@ const ADVANTAGES = [
 
 export default function WhyChooseUs() {
   return (
-    <section className="py-20 relative">
+    <section className="py-20 lg:py-28 relative">
       <Container>
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-black text-soil-900 dark:text-dust-50 sm:text-4xl">

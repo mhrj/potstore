@@ -52,6 +52,7 @@ async function getFeatured() {
 
 async function getLandingImages() {
   const rows = await prisma.landingImage.findMany({
+    where: { key: { not: 'journey' } },
     select: { key: true, url: true, alt: true },
   });
   return Object.fromEntries(rows.map((r) => [r.key, r])) as Record<
@@ -158,7 +159,14 @@ async function getWholesaleHighlight() {
   };
 }
 
-export default async function HomePage() {
+type HomePageProps = {
+  searchParams: Promise<{ motion?: string }>;
+};
+
+export default async function HomePage(props: HomePageProps) {
+  const searchParams = await props.searchParams;
+  const motionVariant = searchParams?.motion === 'b' ? 'b' : 'a';
+
   const [products, landing, content, wholesaleHighlight] = await Promise.all([
     getFeatured(),
     getLandingImages(),
@@ -172,6 +180,7 @@ export default async function HomePage() {
       landing={landing}
       content={content}
       wholesaleHighlight={wholesaleHighlight}
+      motionVariant={motionVariant}
     />
   );
 }

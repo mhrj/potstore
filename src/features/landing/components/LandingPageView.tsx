@@ -1,3 +1,5 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { toFa } from '@/lib/format';
@@ -11,6 +13,7 @@ import Container from '@/components/ui/Container';
 import Skeleton from '@/components/ui/Skeleton';
 import ProductCard from '@/features/catalog/components/ProductCard';
 import { isUnoptimizedImage } from '@/lib/image-validation';
+import { usePointerGlow } from '@/shared/hooks/usePointerGlow';
 
 type ProductItem = Parameters<typeof ProductCard>[0]['product'];
 
@@ -25,19 +28,49 @@ type LandingPageViewProps = {
     sampleProductName: string | null;
     tableRows: Array<{ q: string; p: number; d: string }>;
   };
+  motionVariant?: 'a' | 'b';
 };
+
+function renderFormattedText(text: string) {
+  if (!text.includes('**')) return text;
+  const parts = text.split('**');
+  return parts.map((part, index) =>
+    index % 2 === 1 ? (
+      <strong key={index} className="font-bold text-white">
+        {part}
+      </strong>
+    ) : (
+      part
+    ),
+  );
+}
 
 export default function LandingPageView({
   products,
   landing,
   content,
   wholesaleHighlight,
+  motionVariant = 'a',
 }: LandingPageViewProps) {
   const ctaImage = landing.cta;
+  const heroGlowRef = usePointerGlow<HTMLElement>();
 
   const hero = (
-    <section className="pt-16 pb-12 lg:pt-24 lg:pb-16 relative overflow-hidden bg-transparent">
-      <Container className="relative">
+    <section
+      ref={heroGlowRef}
+      className="pt-20 pb-16 lg:pt-28 lg:pb-20 relative overflow-hidden bg-transparent"
+    >
+      {/* Pointer glow layer */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-px transition-opacity duration-500 ease-out z-0 hidden lg:block"
+        style={{
+          opacity: 'var(--glow-opacity, 0)',
+          background:
+            'radial-gradient(circle var(--glow-radius, 320px) at var(--mx, 50%) var(--my, 50%), var(--glow-color, rgba(64, 145, 108, 0.18)), transparent 80%)',
+        }}
+      />
+      <Container className="relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-20 items-center">
           {/* Column 1: TEXT COLUMN (Appears on the RIGHT in RTL desktop) */}
           <div className="w-full px-4 flex flex-col items-center lg:items-start text-center lg:text-right lg:col-span-5 lg:row-start-1">
@@ -115,7 +148,7 @@ export default function LandingPageView({
   );
 
   const catalog = (
-    <section id="catalog" className="scroll-mt-24 py-24">
+    <section id="catalog" className="scroll-mt-24 py-20 lg:py-28">
       <Container>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
@@ -134,7 +167,7 @@ export default function LandingPageView({
             ))}
           </div>
         ) : (
-          <ul className="mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
+          <ul className="stagger-reveal mt-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-6">
             {products.map((p) => (
               <li key={p.id}>
                 <ProductCard product={p} />
@@ -147,7 +180,7 @@ export default function LandingPageView({
   );
 
   const trust = (
-    <section id="wholesale" className="scroll-mt-24 py-24">
+    <section id="wholesale" className="scroll-mt-24 py-20 lg:py-28">
       <Container>
         <div className="relative overflow-hidden rounded-pot bg-flora-900 border border-transparent dark:border-dust-100/10 p-10 text-flora-100 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.5)] sm:p-14">
           {ctaImage && (
@@ -176,10 +209,13 @@ export default function LandingPageView({
                 ✨ بدون نیاز به کد تخفیف
               </span>
               <h2 className="mt-4 text-3xl font-black text-white sm:text-4xl leading-tight">
-                خرید عمده، به‌صرفه‌تر
+                {content.promo_title?.body || 'خرید عمده، به‌صرفه‌تر'}
               </h2>
               <p className="mt-4 text-sm sm:text-base leading-8 text-flora-100/90">
-                برای خریدهای کم و زیاد، قیمت مناسب داریم. هرچه تعداد بیشتری بخرید، تخفیف بیشتری می‌گیرید.
+                {renderFormattedText(
+                  content.promo_subtitle?.body ||
+                    'اگر قصد تجهیز یک پروژه بزرگ را دارید یا به **فاکتور رسمی و قرارداد سازمانی** نیاز دارید، فرم زیر را تکمیل کنید تا کارشناسان ما بهترین شرایط را به شما ارائه دهند.',
+                )}
               </p>
               <ul className="mt-8 space-y-3.5 text-xs sm:text-sm">
                 {[
@@ -285,7 +321,7 @@ export default function LandingPageView({
   );
 
   return (
-    <main>
+    <main data-motion={motionVariant}>
       <DustToFlora
         hero={hero}
         trustBar={
@@ -298,6 +334,37 @@ export default function LandingPageView({
         wholesaleInquiry={<WholesaleInquiryForm />}
         trust={trust}
       />
+
+      {/* Motion Prototype Switcher Pill */}
+      <aside
+        role="region"
+        aria-label="تغییر حالت موشن"
+        className="fixed bottom-5 start-5 z-50 flex items-center gap-1.5 rounded-full border border-soil-900/15 bg-white/90 p-1.5 shadow-2xl backdrop-blur-md dark:border-dust-100/15 dark:bg-flora-950/90 text-xs font-semibold"
+      >
+        <span className="px-2 text-soil-700/80 dark:text-dust-200/80 hidden sm:inline">حالت حرکت:</span>
+        <Link
+          href="/?motion=a"
+          scroll={false}
+          className={`rounded-full px-3 py-1.5 transition-all ${
+            motionVariant === 'a'
+              ? 'bg-flora-900 text-white shadow-sm dark:bg-flora-600 dark:text-white font-bold'
+              : 'text-soil-700 hover:text-soil-950 dark:text-dust-200 dark:hover:text-white'
+          }`}
+        >
+          حالت الف (سریع)
+        </Link>
+        <Link
+          href="/?motion=b"
+          scroll={false}
+          className={`rounded-full px-3 py-1.5 transition-all ${
+            motionVariant === 'b'
+              ? 'bg-flora-900 text-white shadow-sm dark:bg-flora-600 dark:text-white font-bold'
+              : 'text-soil-700 hover:text-soil-950 dark:text-dust-200 dark:hover:text-white'
+          }`}
+        >
+          حالت ب (نرم)
+        </Link>
+      </aside>
     </main>
   );
 }

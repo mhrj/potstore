@@ -6,6 +6,8 @@ import ProductGallery from '@/features/catalog/components/ProductGallery';
 import ColorPicker from '@/features/catalog/components/ColorPicker';
 import { ProductColorProvider } from '@/features/catalog/components/ProductColorContext';
 import Container from '@/components/ui/Container';
+import RelatedProducts from '@/features/recommendations/RelatedProducts';
+import type { ProductCardData } from '@/features/catalog/components/ProductCard';
 
 type ProductDetailViewProps = {
   product: {
@@ -37,12 +39,18 @@ type ProductDetailViewProps = {
   };
   isAuthed: boolean;
   globalColors: { name: string; hexCode: string }[];
+  recommendations?: {
+    similar: ProductCardData[];
+    complement: ProductCardData[];
+    boughtTogether: ProductCardData[];
+  };
 };
 
 export default function ProductDetailView({
   product,
   isAuthed,
   globalColors,
+  recommendations,
 }: ProductDetailViewProps) {
   const enabledFeatures = parseFeatures(product.features).filter((f) => f.enabled);
   const bundleItems = parseBundleItems(product.bundleItems, product.stock);
@@ -246,6 +254,14 @@ export default function ProductDetailView({
           </div>
         </div>
       </ProductColorProvider>
+
+      {recommendations && (
+        <RelatedProducts
+          similar={recommendations.similar}
+          complement={recommendations.complement}
+          boughtTogether={recommendations.boughtTogether}
+        />
+      )}
     </Container>
   );
 }

@@ -22,7 +22,7 @@ function formatHighlightedText(content: string) {
   return (
     <>
       {parts[0]}
-      <span className="inline-block bg-gradient-to-r from-flora-700 via-dust-400 to-flora-700 dark:from-flora-300 dark:via-dust-300 dark:to-flora-300 bg-clip-text text-transparent animate-text-gradient font-black">
+      <span className="inline-block bg-gradient-to-r from-flora-700 via-dust-400 to-flora-700 dark:from-flora-300 dark:via-dust-300 dark:to-flora-300 bg-clip-text text-transparent font-black">
         جان
       </span>
       {parts.slice(1).join('جان')}

@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getActiveAdmin } from '@/lib/auth';
 import { persistedImageUrlSchema } from '@/lib/image-validation';
+import { rebuildProductRecommendations } from '@/features/recommendations/rebuild';
 
 export const runtime = 'nodejs';
 
@@ -195,6 +196,12 @@ export async function PATCH(req: Request, { params }: Params) {
       },
     });
   });
+
+  try {
+    await rebuildProductRecommendations(updated.id);
+  } catch (recError) {
+    console.error('[recommendations] Failed to rebuild recommendations after product update:', recError);
+  }
 
   return NextResponse.json({ ok: true, product: updated });
 }

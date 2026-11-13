@@ -45,6 +45,12 @@ enum AddressLabel {
   OTHER
 }
 
+enum RelationKind {
+  SIMILAR
+  COMPLEMENT
+  BOUGHT_TOGETHER
+}
+
 // ---------------------------------------------------------------
 // Users
 // ---------------------------------------------------------------
@@ -142,6 +148,8 @@ model Product {
   tags          ProductTag[]
   cartItems     CartItem[]
   orderItems    OrderItem[]
+  relationsFrom ProductRelation[] @relation("RelationsFrom")
+  relationsTo   ProductRelation[] @relation("RelationsTo")
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -231,6 +239,25 @@ model PriceTier {
 
   @@unique([productId, minQuantity])
   @@index([productId])
+}
+
+// Product recommendation links
+model ProductRelation {
+  id        String       @id @default(cuid())
+  fromId    String
+  from      Product      @relation("RelationsFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  toId      String
+  to        Product      @relation("RelationsTo", fields: [toId], references: [id], onDelete: Cascade)
+  kind      RelationKind
+  score     Float        @default(0)
+  manual    Boolean      @default(false)
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([fromId, toId, kind])
+  @@index([fromId, kind])
+  @@index([toId])
 }
 
 // ---------------------------------------------------------------
