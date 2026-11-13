@@ -9,6 +9,7 @@ export const runtime = 'nodejs';
 const patchSchema = z.object({
   quantity: z.coerce.number().int().min(1).max(5000),
   variantId: z.string().optional().nullable(),
+  selectedColorHex: z.string().optional().nullable(),
 });
 
 type Params = { params: Promise<{ productId: string }> };
@@ -21,12 +22,14 @@ export async function PATCH(req: Request, { params }: Params) {
   const { productId } = await params;
   const url = new URL(req.url);
   const variantIdParam = url.searchParams.get('variantId');
+  const selectedColorHexParam = url.searchParams.get('selectedColorHex');
 
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ message: 'تعداد نامعتبر' }, { status: 400 });
   }
   const variantId = parsed.data.variantId ?? variantIdParam ?? null;
+  const selectedColorHex = parsed.data.selectedColorHex ?? selectedColorHexParam ?? undefined;
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -82,6 +85,7 @@ export async function PATCH(req: Request, { params }: Params) {
       userId: session.sub,
       productId,
       variantId: variantId ? variantId : null,
+      ...(selectedColorHex !== undefined ? { selectedColorHex: selectedColorHex || null } : {}),
     },
     data: { quantity: parsed.data.quantity },
   });
@@ -101,12 +105,14 @@ export async function DELETE(req: Request, { params }: Params) {
   const { productId } = await params;
   const url = new URL(req.url);
   const variantId = url.searchParams.get('variantId') || null;
+  const selectedColorHex = url.searchParams.get('selectedColorHex');
 
   await prisma.cartItem.deleteMany({
     where: {
       userId: session.sub,
       productId,
       variantId: variantId ? variantId : null,
+      ...(selectedColorHex !== null ? { selectedColorHex: selectedColorHex || null } : {}),
     },
   });
 

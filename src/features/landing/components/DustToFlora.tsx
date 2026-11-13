@@ -98,7 +98,7 @@ export default function DustToFlora({
 
       <BotanicalCanvas active={true} variant="auto" progress={progress} />
 
-      <div className="relative z-10">
+      <div className="relative z-10 -mb-px">
         {hero}
       </div>
 

@@ -9,6 +9,7 @@ import { numberToWordsFa } from '@/lib/number-to-words';
 import type { PricedLine } from '@/lib/pricing';
 import ItemColorBadge from '@/features/catalog/components/ItemColorBadge';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import { extractColorName, formatSpecs, formatBundleBreakdown } from './OrderItemDetails';
 
 export default function CartItemRow({ line, stock }: { line: PricedLine; stock: number }) {
   const router = useRouter();
@@ -27,8 +28,11 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
     return Math.max(step, Math.min(maxQty, multiple));
   };
 
-  const itemEndpoint =
-    '/api/cart/' + line.productId + (line.variantId ? `?variantId=${encodeURIComponent(line.variantId)}` : '');
+  const searchParams = new URLSearchParams();
+  if (line.variantId) searchParams.set('variantId', line.variantId);
+  if (line.selectedColorHex) searchParams.set('selectedColorHex', line.selectedColorHex);
+  const queryString = searchParams.toString();
+  const itemEndpoint = `/api/cart/${line.productId}${queryString ? `?${queryString}` : ''}`;
 
   const update = (next: number) => {
     const clamped = clamp(next);
@@ -39,7 +43,11 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
       const res = await fetch(itemEndpoint, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity: clamped, variantId: line.variantId }),
+        body: JSON.stringify({
+          quantity: clamped,
+          variantId: line.variantId,
+          selectedColorHex: line.selectedColorHex,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -63,6 +71,10 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
       router.refresh();
     });
   };
+
+  const colorName = extractColorName(line);
+  const specs = formatSpecs(line);
+  const bundleBreakdown = line.bundleSize > 1 && line.bundleItems ? formatBundleBreakdown(line.bundleItems) : null;
 
   return (
     <li className="flex gap-4 rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-4">
@@ -107,9 +119,27 @@ export default function CartItemRow({ line, stock }: { line: PricedLine; stock: 
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-soil-700/70 dark:text-dust-200/70">
-              {formatToman(line.unitToman)} × {toFa(qty)} عدد {line.bundleSize > 1 && `(معادل ${toFa(qty / line.bundleSize)} بسته)`} — {line.tierLabel}
-            </p>
+            <div className="mt-1 space-y-1">
+              <p className="text-xs font-semibold text-soil-800 dark:text-dust-200">
+                {toFa(line.bundleSize > 1 ? Math.round(qty / line.bundleSize) : qty)}{' '}
+                {line.bundleSize > 1 ? 'بسته' : 'عدد'}
+                {colorName ? ` - رنگ ${colorName}` : ''} -{' '}
+                {formatToman(line.unitToman * (line.bundleSize > 1 ? line.bundleSize : 1))} تومان
+              </p>
+
+              {bundleBreakdown && (
+                <p className="text-[11px] text-flora-800 dark:text-flora-300 font-medium bg-flora-50/70 dark:bg-flora-950/50 px-2 py-0.5 rounded-lg border border-flora-200/60 dark:border-flora-800/40">
+                  {bundleBreakdown}
+                </p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-soil-700/70 dark:text-dust-200/70">
+                {specs && <span>{specs}</span>}
+                <span className="rounded bg-flora-50 dark:bg-flora-950 px-1.5 py-0.5 text-[10px] text-flora-700 dark:text-flora-300 border border-flora-300/40 dark:border-flora-700">
+                  سطح: {line.tierLabel}
+                </span>
+              </div>
+            </div>
           </div>
           <button
             type="button"

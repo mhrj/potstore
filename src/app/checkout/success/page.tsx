@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { formatToman, toFa, formatDateFa } from '@/lib/format';
 import Container from '@/components/ui/Container';
+import OrderItemDetails, { GroupedOrderItems } from '@/features/checkout/components/OrderItemDetails';
+import PrintInvoiceButton from '@/features/checkout/components/PrintInvoiceButton';
 
 type Props = {
   searchParams: Promise<{ ref_id?: string; order?: string }>;
@@ -38,10 +40,21 @@ export default async function SuccessPage({ searchParams }: Props) {
           items: {
             select: {
               id: true,
+              productId: true,
               productName: true,
+              productSlug: true,
+              sku: true,
+              imageUrl: true,
+              material: true,
+              diameterCm: true,
+              heightCm: true,
+              variantId: true,
+              variantTitle: true,
               quantity: true,
+              listUnitToman: true,
               unitToman: true,
               lineTotalToman: true,
+              tierLabel: true,
               isBundle: true,
               bundleSize: true,
               colorData: true,
@@ -149,12 +162,36 @@ export default async function SuccessPage({ searchParams }: Props) {
           </p>
         )}
 
+        {isOwner && order && order.items && order.items.length > 0 && (
+          <div className="mt-8 rounded-2xl border border-soil-900/10 bg-dust-50/40 p-5 dark:border-dust-50/10 dark:bg-flora-950/40">
+            <h2 className="text-sm font-black text-soil-900 dark:text-dust-50 mb-3">
+              اقلام ثبت‌شده در سفارش
+            </h2>
+            <GroupedOrderItems items={order.items} />
+          </div>
+        )}
+
         <div className="mt-8 flex flex-wrap gap-3">
+          {order?.id ? (
+            <Link
+              href={`/dashboard/orders/${order.id}`}
+              className="rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-3 text-sm font-bold transition-colors hover:bg-flora-700 cursor-pointer shadow-sm"
+            >
+              مشاهده و چاپ فاکتور
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard"
+              className="rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-3 text-sm font-bold transition-colors hover:bg-flora-700 cursor-pointer shadow-sm"
+            >
+              پیگیری سفارش
+            </Link>
+          )}
           <Link
             href="/dashboard"
-            className="rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-3 text-sm font-bold transition-colors hover:bg-flora-700 cursor-pointer shadow-sm"
+            className="rounded-full border border-soil-900/15 px-6 py-3 text-sm font-bold text-soil-900 transition-colors hover:bg-dust-50 dark:border-dust-50/20 dark:text-dust-50 dark:hover:bg-flora-950"
           >
-            پیگیری سفارش
+            سفارش‌های من
           </Link>
           <Link
             href="/"

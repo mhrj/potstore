@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { formatToman, formatWeight } from '@/lib/format';
 import { numberToWordsFa } from '@/lib/number-to-words';
 import Container from '@/components/ui/Container';
-import CartItemRow from '@/features/checkout/components/CartItemRow';
+import CartGroupedProductRow from '@/features/checkout/components/CartGroupedProductRow';
+import { groupOrderItemsByProduct } from '@/features/checkout/components/OrderItemDetails';
 import type { CartTotals } from '@/lib/pricing';
 
 type CartViewProps = {
@@ -31,16 +32,28 @@ export default function CartView({ totals, stockMap }: CartViewProps) {
     );
   }
 
+  const groupedLines = groupOrderItemsByProduct(totals.lines).map((grp) => ({
+    productId: grp.productId,
+    productName: grp.name,
+    productSlug: grp.slug ?? '',
+    imageUrl: grp.imageUrl,
+    specs: grp.specs,
+    lines: grp.items as typeof totals.lines,
+    totalQuantity: grp.totalQuantity,
+    totalToman: grp.totalToman,
+    breakdownSummary: grp.breakdownSummary,
+  }));
+
   return (
     <Container className="py-12">
       <h1 className="text-2xl font-black text-soil-900 dark:text-dust-50">سبد خرید</h1>
       <div className="mt-8 grid gap-8 lg:grid-cols-12">
         <ul className="space-y-4 lg:col-span-8">
-          {totals.lines.map((l) => (
-            <CartItemRow
-              key={`${l.productId}-${l.variantId ?? 'default'}`}
-              line={l}
-              stock={stockMap[l.productId] ?? 0}
+          {groupedLines.map((grp) => (
+            <CartGroupedProductRow
+              key={grp.productId}
+              group={grp}
+              stock={stockMap[grp.productId] ?? 0}
             />
           ))}
         </ul>

@@ -5,7 +5,7 @@ type Props = {
   className?: string;
 };
 
-const DEFAULT_COLOR_NAMES: Record<string, string> = {
+export const DEFAULT_COLOR_NAMES: Record<string, string> = {
   '#000000': 'مشکی',
   '#1F1F1F': 'مشکی',
   '#111111': 'مشکی',
@@ -38,7 +38,7 @@ const DEFAULT_COLOR_NAMES: Record<string, string> = {
   '#C0C0C0': 'نقره‌ای',
 };
 
-function resolveColorName(hex: string, explicitName?: string): string {
+export function resolveColorName(hex: string, explicitName?: string): string {
   if (explicitName && explicitName.trim()) return explicitName.trim();
   const normalized = hex.trim().toUpperCase();
   return DEFAULT_COLOR_NAMES[normalized] || '';
@@ -69,6 +69,8 @@ export default function ItemColorBadge({ colorData, className = '' }: Props) {
       if ('name' in col && col.name) {
         singleColorName = String(col.name);
       }
+    } else if (typeof data.selectedColorHex === 'string') {
+      singleColor = data.selectedColorHex;
     }
     if (typeof data.bundleColors === 'object' && data.bundleColors !== null) {
       const bMap: Record<string, { hex: string; name?: string }> = {};

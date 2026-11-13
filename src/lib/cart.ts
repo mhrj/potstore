@@ -42,6 +42,10 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
         select: {
           id: true,
           slug: true,
+          sku: true,
+          material: true,
+          diameterCm: true,
+          heightCm: true,
           name: true,
           basePriceToman: true,
           salePriceToman: true,
@@ -70,6 +74,10 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
         product: {
           id: i.product.id,
           slug: i.product.slug,
+          sku: i.product.sku,
+          material: i.product.material,
+          diameterCm: i.product.diameterCm,
+          heightCm: i.product.heightCm,
           name: i.product.name,
           basePriceToman: i.product.basePriceToman,
           salePriceToman: i.product.salePriceToman,
@@ -89,6 +97,7 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
         ),
         quantity: i.quantity,
         colorData: i.colorData,
+        selectedColorHex: i.selectedColorHex,
         colorAdjustment: i.colorAdjustment ?? 0,
         variantId: i.variantId,
         variantTitle: i.variantTitle ?? i.variant?.title,
@@ -142,11 +151,27 @@ export async function addToCart(
     throw new Error(`تعداد سفارش باید مضربی از ${toFa(bundleSize)} باشد`);
   }
 
+  let finalAdjustment = 0;
+  let finalColorHex: string | null = clientSelectedColorHex ?? null;
+
+  if (!isBundle) {
+    const selColor = colorData?.selectedColor as { hexCode?: string } | undefined;
+    const chosenHex =
+      clientSelectedColorHex ??
+      selColor?.hexCode ??
+      (typeof colorData?.color === 'string' ? colorData.color : null);
+
+    if (chosenHex) {
+      finalColorHex = chosenHex;
+    }
+  }
+
   const existing = await prisma.cartItem.findFirst({
     where: {
       userId,
       productId,
       variantId: variantId ?? null,
+      selectedColorHex: finalColorHex ?? null,
     },
   });
   const target = (existing?.quantity ?? 0) + quantity;
@@ -160,29 +185,17 @@ export async function addToCart(
     );
   }
 
-  let finalAdjustment = 0;
-  let finalColorHex: string | null = clientSelectedColorHex ?? null;
-
   if (!isBundle) {
     const singleColors = parseColorOptions(product.colorOptions, product.stock);
-    const selColor = colorData?.selectedColor as { hexCode?: string } | undefined;
-    const chosenHex =
-      clientSelectedColorHex ??
-      selColor?.hexCode ??
-      (typeof colorData?.color === 'string' ? colorData.color : null);
-
-    if (chosenHex) {
-      finalColorHex = chosenHex;
-      if (singleColors.length > 0) {
-        const opt = singleColors.find(
-          (c) => c.hexCode.toUpperCase() === chosenHex.toUpperCase(),
-        );
-        if (opt) {
-          if (opt.stock < target) {
-            throw new Error(`موجودی رنگ ${opt.hexCode} کافی نیست (موجودی: ${toFa(opt.stock)} عدد)`);
-          }
-          finalAdjustment = opt.priceAdjustment;
+    if (finalColorHex && singleColors.length > 0) {
+      const opt = singleColors.find(
+        (c) => c.hexCode.toUpperCase() === finalColorHex!.toUpperCase(),
+      );
+      if (opt) {
+        if (opt.stock < target) {
+          throw new Error(`موجودی رنگ ${opt.hexCode} کافی نیست (موجودی: ${toFa(opt.stock)} عدد)`);
         }
+        finalAdjustment = opt.priceAdjustment;
       }
     }
   } else if (colorData?.bundleColors) {

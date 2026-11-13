@@ -159,14 +159,7 @@ async function getWholesaleHighlight() {
   };
 }
 
-type HomePageProps = {
-  searchParams: Promise<{ motion?: string }>;
-};
-
-export default async function HomePage(props: HomePageProps) {
-  const searchParams = await props.searchParams;
-  const motionVariant = searchParams?.motion === 'b' ? 'b' : 'a';
-
+export default async function HomePage() {
   const [products, landing, content, wholesaleHighlight] = await Promise.all([
     getFeatured(),
     getLandingImages(),
@@ -180,7 +173,6 @@ export default async function HomePage(props: HomePageProps) {
       landing={landing}
       content={content}
       wholesaleHighlight={wholesaleHighlight}
-      motionVariant={motionVariant}
     />
   );
 }

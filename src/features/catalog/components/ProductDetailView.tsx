@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { toFa } from '@/lib/format';
-import { parseFeatures, parseBundleItems, parseColorOptions } from '@/lib/product-features';
+import { parseFeatures, parseBundleItems, parseColorOptions, calculateTotalStock } from '@/lib/product-features';
 import TieredPricing from '@/features/catalog/components/TieredPricing';
 import ProductGallery from '@/features/catalog/components/ProductGallery';
 import ColorPicker from '@/features/catalog/components/ColorPicker';
@@ -61,10 +61,26 @@ export default function ProductDetailView({
   recommendations,
 }: ProductDetailViewProps) {
   const enabledFeatures = parseFeatures(product.features).filter((f) => f.enabled);
-  const bundleItems = parseBundleItems(product.bundleItems, product.stock);
+  const totalStock = calculateTotalStock(product);
+  const bundleItems = parseBundleItems(product.bundleItems, totalStock);
 
   const isBundle = product.bundleSize > 1;
   const displayLabel = isBundle ? `ست ${toFa(product.bundleSize)} عددی` : 'تک‌عدد';
+
+  const singleColors = !isBundle ? parseColorOptions(product.colorOptions, totalStock) : [];
+  const defaultColor =
+    singleColors.find((c) => c.stock > 0)?.hexCode ??
+    singleColors[0]?.hexCode ??
+    null;
+
+  const defaultBundleColors: Record<number, string> = {};
+  if (isBundle && bundleItems && bundleItems.length > 0) {
+    bundleItems.forEach((item, idx) => {
+      const colors = item.colorOptions && item.colorOptions.length > 0 ? item.colorOptions : singleColors;
+      const chosen = colors.find((c) => c.stock > 0)?.hexCode ?? colors[0]?.hexCode;
+      if (chosen) defaultBundleColors[idx] = chosen;
+    });
+  }
 
   const specs = isBundle
     ? []
@@ -84,9 +100,6 @@ export default function ProductDetailView({
   const effectiveBasePrice = hasSale ? product.salePriceToman! : product.basePriceToman;
   const hasVariants = !isBundle && Boolean(product.variants && product.variants.length > 0);
   const startingPrice = hasVariants ? product.variants![0].priceToman : effectiveBasePrice;
-  const totalStock = hasVariants
-    ? product.variants!.reduce((sum, v) => sum + v.stock, 0)
-    : product.stock;
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -139,7 +152,7 @@ export default function ProductDetailView({
         <span className="text-soil-900 dark:text-dust-50 font-bold">{product.name}</span>
       </nav>
 
-      <ProductColorProvider>
+      <ProductColorProvider initialColor={defaultColor} initialBundleColors={defaultBundleColors}>
         <div className="grid gap-10 lg:grid-cols-12">
           <div className="lg:col-span-6">
             <ProductGallery
@@ -149,14 +162,14 @@ export default function ProductDetailView({
                 alt: img.alt,
               }))}
               productName={product.name}
-              soldOut={product.stock <= 0}
+              soldOut={totalStock <= 0}
             />
             {product.bundleSize <= 1 && (
               <ColorPicker
                 product={{
                   id: product.id,
                   name: product.name,
-                  colorOptions: parseColorOptions(product.colorOptions, product.stock),
+                  colorOptions: singleColors,
                   bundleSize: product.bundleSize,
                 }}
               />
@@ -218,10 +231,10 @@ export default function ProductDetailView({
                   salePriceToman: product.salePriceToman,
                   weightGrams: product.weightGrams,
                   unitsPerCarton: product.unitsPerCarton,
-                  stock: product.stock,
+                  stock: totalStock,
                   bundleSize: product.bundleSize,
                   bundleItems: bundleItems,
-                  colorOptions: parseColorOptions(product.colorOptions, product.stock),
+                  colorOptions: singleColors,
                   variants: product.variants,
                   minOrderQuantity: product.minOrderQuantity,
                   allowBatchDiscount: product.allowBatchDiscount,

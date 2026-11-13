@@ -1,6 +1,6 @@
-import { prisma } from '@/lib/prisma';
-import { requireUser } from '@/lib/auth';
-import DashboardView from '@/features/checkout/components/DashboardView';
+import { prisma } from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
+import DashboardView from "@/features/checkout/components/DashboardView";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -19,16 +19,23 @@ export default async function DashboardPage() {
         refId: true,
         trackingCode: true,
         items: {
-          take: 4,
           select: {
             id: true,
+            productId: true,
             productName: true,
+            productSlug: true,
             imageUrl: true,
+            quantity: true,
+            unitToman: true,
+            lineTotalToman: true,
+            variantTitle: true,
+            colorData: true,
+            isBundle: true,
+            bundleSize: true,
           },
         },
-        _count: { select: { items: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: 20,
     }),
     prisma.address.findMany({
@@ -45,7 +52,7 @@ export default async function DashboardPage() {
         line2: true,
         isDefault: true,
       },
-      orderBy: { isDefault: 'desc' },
+      orderBy: { isDefault: "desc" },
     }),
   ]);
 

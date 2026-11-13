@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { formatToman, formatWeight, toFa } from '@/lib/format';
 import { numberToWordsFa } from '@/lib/number-to-words';
 import { nextTierHint, resolveTier, type Tier } from '@/lib/pricing';
@@ -133,8 +134,13 @@ export default function TieredPricing({
   const colorCtx = useProductColor();
 
   const hasVariants = !isBundle && Boolean(product.variants && product.variants.length > 0);
+  const defaultVariant = useMemo(() => {
+    if (!hasVariants || !product.variants || product.variants.length === 0) return null;
+    return product.variants.find((v) => v.stock > 0) ?? product.variants[0] ?? null;
+  }, [hasVariants, product.variants]);
+
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
-    hasVariants && product.variants && product.variants.length > 0 ? product.variants[0].id : null,
+    defaultVariant?.id ?? null,
   );
 
   const activeVariant = useMemo(() => {
@@ -257,6 +263,7 @@ export default function TieredPricing({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -309,6 +316,34 @@ export default function TieredPricing({
     typeof product.salePriceToman === 'number' &&
     product.salePriceToman > 0 &&
     product.salePriceToman < product.basePriceToman;
+
+  const singleColors = useMemo(() => product.colorOptions ?? [], [product.colorOptions]);
+  const hasColors = !isBundle && singleColors.length > 0;
+  const selectedColorOpt = useMemo(() => {
+    if (!hasColors || !colorCtx?.selectedColor) return null;
+    return (
+      singleColors.find(
+        (c) => c.hexCode.toUpperCase() === colorCtx.selectedColor?.toUpperCase(),
+      ) ?? null
+    );
+  }, [hasColors, colorCtx?.selectedColor, singleColors]);
+
+  const isColorOutOfStock = Boolean(hasColors && selectedColorOpt && selectedColorOpt.stock <= 0);
+  const isNoColorSelected = Boolean(hasColors && !colorCtx?.selectedColor);
+  const isVariantOutOfStock = Boolean(hasVariants && activeVariant && activeVariant.stock <= 0);
+  const isNoVariantSelected = Boolean(hasVariants && !activeVariant);
+
+  const lowestPrice = useMemo(() => {
+    if (hasVariants && product.variants && product.variants.length > 0) {
+      return Math.min(...product.variants.map((v) => v.priceToman));
+    }
+    if (hasColors && singleColors.length > 0) {
+      const adjustments = singleColors.map((c) => c.priceAdjustment || 0);
+      const minAdj = Math.min(...adjustments);
+      return (hasSale ? product.salePriceToman! : product.basePriceToman) + minAdj;
+    }
+    return hasSale ? product.salePriceToman! : product.basePriceToman;
+  }, [hasVariants, product.variants, hasColors, singleColors, hasSale, product.salePriceToman, product.basePriceToman]);
 
   const totalColorAdjustment = useMemo(() => {
     if (!isBundle) {
@@ -517,7 +552,15 @@ export default function TieredPricing({
         return;
       }
       setAdded(true);
+      setCount(minCount);
+      setShowToast(true);
       router.refresh();
+      setTimeout(() => {
+        setAdded(false);
+      }, 3000);
+      setTimeout(() => {
+        setShowToast(false);
+      }, 4000);
     });
   };
 
@@ -572,9 +615,11 @@ export default function TieredPricing({
 
   const outOfStock = isBundle
     ? !isBundleAvailable() || maxCount < minCount
-    : hasVariants && activeVariant
-      ? activeVariant.stock <= 0 || maxCount < minCount || count > activeVariant.stock
-      : !isBundleAvailable() || product.stock <= 0 || maxCount < minCount;
+    : hasVariants
+      ? isNoVariantSelected || isVariantOutOfStock || maxCount < minCount || count > (activeVariant?.stock ?? 0)
+      : hasColors
+        ? isNoColorSelected || isColorOutOfStock || maxCount < minCount || count > (selectedColorOpt?.stock ?? 0)
+        : !isBundleAvailable() || product.stock <= 0 || maxCount < minCount;
 
   return (
     <div className="space-y-6">
@@ -1028,9 +1073,11 @@ export default function TieredPricing({
               )}
               <div className="flex items-baseline gap-2 flex-wrap">
                 <span className={`text-xl font-black ${hasSale ? 'text-red-600 dark:text-red-400' : 'text-soil-900 dark:text-dust-50'}`}>
-                  {formatToman(packagePrice)}
+                  {isNoColorSelected || isNoVariantSelected
+                    ? `از ${formatToman(lowestPrice)} تومان`
+                    : `${formatToman(packagePrice)} تومان`}
                 </span>
-                {totalColorAdjustment !== 0 && (
+                {totalColorAdjustment !== 0 && !isNoColorSelected && !isNoVariantSelected && (
                   <span className="text-xs font-medium text-flora-700 dark:text-flora-400">
                     (شامل تغییر قیمت رنگ:{' '}
                     {totalColorAdjustment > 0 ? '+' : ''}
@@ -1278,21 +1325,38 @@ export default function TieredPricing({
         <button
           type="button"
           onClick={handleAdd}
-          disabled={pending || outOfStock}
+          disabled={pending || outOfStock || isNoColorSelected || isNoVariantSelected || isColorOutOfStock || isVariantOutOfStock}
           className="w-full rounded-2xl bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-4 text-sm font-black shadow-lg shadow-flora-900/20 transition-colors hover:bg-flora-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {outOfStock
-            ? hasVariants
-              ? 'این مدل موقتاً تمام شده است'
-              : 'این محصول موقتاً تمام شده است'
-            : pending
-              ? 'در حال افزودن…'
-              : added
-                ? 'به سبد اضافه شد ✓'
-                : isBundle
-                  ? `افزودن ${toFa(count)} بسته به سبد — ${formatToman(total)}`
-                  : `افزودن ${toFa(count)} عدد به سبد — ${formatToman(total)}`}
+          {isNoColorSelected
+            ? 'لطفاً رنگ را انتخاب کنید'
+            : isNoVariantSelected
+              ? 'لطفاً یک مدل انتخاب کنید'
+              : isColorOutOfStock
+                ? 'این رنگ موجود نیست'
+                : isVariantOutOfStock
+                  ? 'این مدل موقتاً تمام شده است'
+                  : outOfStock
+                    ? hasVariants
+                      ? 'این مدل موقتاً تمام شده است'
+                      : 'این محصول موقتاً تمام شده است'
+                    : pending
+                      ? 'در حال افزودن…'
+                      : added
+                        ? 'به سبد اضافه شد ✓'
+                        : isBundle
+                          ? `افزودن ${toFa(count)} بسته به سبد — ${formatToman(total)}`
+                          : `افزودن ${toFa(count)} عدد به سبد — ${formatToman(total)}`}
         </button>
+
+        {isColorOutOfStock && (
+          <p
+            role="alert"
+            className="rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800/40 px-4 py-3 text-xs font-bold text-red-700 dark:text-red-300 text-center"
+          >
+            این رنگ موجود نیست
+          </p>
+        )}
 
         <div className="mt-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200/80 dark:border-amber-700/50 px-4 py-3 text-xs font-bold text-amber-700 dark:text-amber-300 text-center">
           📦 توجه: مرسولات فقط در روزهای <strong>یکشنبه</strong> و <strong>چهارشنبه</strong> ارسال می‌شوند.
@@ -1307,6 +1371,37 @@ export default function TieredPricing({
           </p>
         )}
       </div>
+
+      {/* Visual success confirmation Toast */}
+      <AnimatePresence>
+        {showToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 24, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.95 }}
+            transition={{ duration: 0.25 }}
+            className="fixed bottom-6 left-6 z-50 flex items-center gap-3.5 rounded-2xl bg-flora-950 text-white dark:bg-flora-900 dark:border dark:border-dust-50/20 px-5 py-3.5 shadow-2xl shadow-black/30"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white text-sm font-bold">
+              ✓
+            </span>
+            <div className="text-xs">
+              <p className="font-bold text-sm text-dust-50">به سبد خرید اضافه شد</p>
+              <p className="text-soil-200/80 dark:text-dust-200/80 mt-0.5">
+                {product.name} ({toFa(count)} عدد) با موفقیت به سبد خرید افزوده شد.
+              </p>
+            </div>
+            <Link
+              href="/cart"
+              className="mr-2 rounded-xl bg-flora-500 hover:bg-flora-400 text-flora-950 px-3 py-1.5 text-xs font-black transition-colors"
+            >
+              مشاهده سبد
+            </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

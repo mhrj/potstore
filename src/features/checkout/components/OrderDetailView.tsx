@@ -9,6 +9,7 @@ import ItemColorBadge from '@/features/catalog/components/ItemColorBadge';
 import PrintInvoiceButton from '@/features/checkout/components/PrintInvoiceButton';
 import BundleDetailsAccordion from '@/features/checkout/components/BundleDetailsAccordion';
 import ShippingScheduleNotice from '@/features/checkout/components/ShippingScheduleNotice';
+import OrderItemDetails, { GroupedOrderItems } from '@/features/checkout/components/OrderItemDetails';
 
 type OrderItem = {
   id: string;
@@ -116,18 +117,18 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
       </header>
 
       {isCanceled ? (
-        <p className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-sm font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 print:mt-2 print:py-2">
+        <p className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-sm font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 print:hidden">
           این سفارش لغو شده است.
         </p>
       ) : (
-        <div className="mt-8 print:mt-2">
+        <div className="mt-8 print:hidden">
           {status === 'PENDING' && (
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-200 print:hidden">
               <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
               در انتظار پرداخت — پس از نهایی‌سازی پرداخت، سفارش شما وارد فرآیند آماده‌سازی می‌شود.
             </div>
           )}
-          <ol className="grid gap-3 grid-cols-2 sm:grid-cols-4 print:flex print:flex-row print:justify-between print:gap-2 print:p-1.5 print:rounded-lg print:border print:border-soil-900/10 print:bg-dust-50/50 print:text-xs">
+          <ol className="grid gap-3 grid-cols-2 sm:grid-cols-4">
             {TIMELINE.map((step, index) => {
               const isCurrent = index === currentIndex;
               const isDone = currentIndex >= 0 && index < currentIndex;
@@ -141,17 +142,16 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
                       ? 'border-flora-500 bg-flora-50 text-flora-950 shadow-xs ring-2 ring-flora-500/25 dark:border-flora-300 dark:bg-flora-700 dark:text-dust-50 dark:ring-flora-300/40'
                       : isDone
                         ? 'border-flora-300 bg-flora-100/70 text-flora-700 dark:border-flora-700/60 dark:bg-flora-900/80 dark:text-flora-300'
-                        : 'border-soil-900/10 bg-white text-soil-700/40 dark:border-dust-50/10 dark:bg-flora-900/50 dark:text-dust-400') +
-                    ' print:border-none print:bg-transparent print:p-0 print:shadow-none print:ring-0 print:text-[10px]'
+                        : 'border-soil-900/10 bg-white text-soil-700/40 dark:border-dust-50/10 dark:bg-flora-900/50 dark:text-dust-400')
                   }
                 >
-                  <div className="flex items-center justify-between mb-1.5 print:mb-0 print:inline-flex print:gap-1">
-                    <span className="text-[10px] print:text-[9px] opacity-75">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] opacity-75">
                       {isDone ? '✓ ' : ''}مرحله {toFa(index + 1)}:
                     </span>
-                    <span className="text-sm font-black print:text-[10px]">{ORDER_STATUS_LABELS[step]}</span>
+                    <span className="text-sm font-black">{ORDER_STATUS_LABELS[step]}</span>
                     {isCurrent && (
-                      <span className="mt-1 inline-block text-[10px] print:text-[9px] font-medium text-flora-700 dark:text-flora-300 print:mt-0">
+                      <span className="mt-1 inline-block text-[10px] font-medium text-flora-700 dark:text-flora-300">
                         (کنونی)
                       </span>
                     )}
@@ -190,107 +190,8 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
       <div className="mt-8 grid gap-6 lg:grid-cols-[1.5fr_1fr] print:mt-2 print:grid-cols-1">
         <section className="rounded-2xl border border-soil-900/10 bg-white p-6 dark:border-dust-50/10 dark:bg-flora-900 print:p-2 print:shadow-none print:border print:border-soil-900/10">
           <h2 className="text-sm font-black text-soil-900 dark:text-dust-50 print:text-xs">اقلام سفارش</h2>
-          <div className="mt-4 divide-y divide-soil-900/10 dark:divide-dust-50/10 print:mt-1">
-            {order.items.map((item) => {
-              const specs = renderItemSpecs(item);
-              const bundleSize = item.bundleSize && item.bundleSize > 1 ? item.bundleSize : 1;
-              const isBundle = bundleSize > 1;
-              const displayQty = isBundle ? Math.round(item.quantity / bundleSize) : item.quantity;
-              const displayUnitPrice = isBundle ? item.unitToman * bundleSize : item.unitToman;
-
-              return (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between print:flex-row print:items-center print:justify-between print:py-1 print:gap-2 print:break-inside-avoid"
-                >
-                  <div className="flex items-start sm:items-center gap-4 print:gap-2">
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.productName}
-                        className="w-20 h-20 rounded-xl object-cover shrink-0 border border-soil-900/10 dark:border-dust-50/10 shadow-2xs print:w-10 print:h-10 print:rounded-md"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-xl bg-dust-100 dark:bg-flora-950 border border-soil-900/10 dark:border-dust-50/10 flex items-center justify-center text-soil-700/40 dark:text-dust-400 shrink-0 print:w-10 print:h-10 print:rounded-md">
-                        <svg className="w-7 h-7 print:w-5 print:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="space-y-1.5 print:space-y-0.5 print:text-[10px]">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                          href={`/products/${item.productSlug}`}
-                          className="font-bold text-soil-900 dark:text-dust-50 hover:text-flora-700 dark:hover:text-flora-300 transition print:text-xs"
-                        >
-                          {item.productName}
-                        </Link>
-                        {isBundle && (
-                          <span className="inline-flex items-center rounded-md bg-flora-100 dark:bg-flora-950 px-2 py-0.5 text-[11px] font-bold text-flora-700 dark:text-flora-300 border border-flora-300 dark:border-flora-700 print:text-[9px] print:px-1.5 print:py-0">
-                            شامل {toFa(bundleSize)} عدد گلدان
-                          </span>
-                        )}
-                      </div>
-
-                      {item.sku && (
-                        <p className="text-xs text-soil-700/60 dark:text-dust-200/60 print:text-[9px]">
-                          کد کالا:{' '}
-                          <span className="font-mono font-medium" dir="ltr">
-                            {item.sku}
-                          </span>
-                        </p>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-soil-700/75 dark:text-dust-200/75 print:text-[9px]">
-                        {specs && <span>{specs}</span>}
-                        {!isBundle && <ItemColorBadge colorData={item.colorData} />}
-                      </div>
-
-                      {isBundle && (
-                        <BundleDetailsAccordion
-                          bundleSize={bundleSize}
-                          bundleCount={displayQty}
-                          colorData={item.colorData}
-                          productBundleItems={item.product?.bundleItems}
-                        />
-                      )}
-
-                      <div className="flex items-center gap-2 flex-wrap text-xs text-soil-700/80 dark:text-dust-200/80 print:text-[9px]">
-                        <p>
-                          {isBundle ? (
-                            <>
-                              {toFa(displayQty)} بسته × {formatToman(displayUnitPrice)} ={' '}
-                              <span className="font-bold text-soil-900 dark:text-dust-50">
-                                {formatToman(item.lineTotalToman)}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              {toFa(displayQty)} عدد × {formatToman(displayUnitPrice)} ={' '}
-                              <span className="font-bold text-soil-900 dark:text-dust-50">
-                                {formatToman(item.lineTotalToman)}
-                              </span>
-                            </>
-                          )}
-                        </p>
-                        {item.tierLabel && (
-                          <span className="rounded-md bg-flora-50 dark:bg-flora-950 px-2 py-0.5 text-[11px] font-medium text-flora-700 dark:text-flora-300 border border-flora-300/60 dark:border-flora-700 print:text-[9px]">
-                            سطح: {item.tierLabel}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-0 border-soil-900/5 dark:border-dust-50/5 pt-2 sm:pt-0 shrink-0 print:border-0 print:pt-0">
-                    <span className="text-xs text-soil-700/60 dark:text-dust-200/60 sm:hidden">مبلغ کل:</span>
-                    <p className="font-bold text-flora-900 dark:text-flora-300 text-sm sm:text-base print:text-xs">
-                      {formatToman(item.lineTotalToman)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="mt-4 print:mt-1">
+            <GroupedOrderItems items={order.items} />
           </div>
 
           <dl className="mt-5 space-y-2 border-t border-soil-900/10 dark:border-dust-50/10 pt-4 text-sm print:mt-2 print:pt-2 print:space-y-1 print:text-[10px]">

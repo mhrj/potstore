@@ -68,6 +68,27 @@ export function parseProductVariants(raw: unknown): ProductVariantItem[] {
   return items;
 }
 
+/**
+ * Calculates the total stock for a product.
+ * If variants exist (variants.length > 0), dynamically calculates total stock
+ * as the sum of all variant stocks and does not rely on base Product.stock.
+ * If colorOptions exist with stock, sums them; otherwise falls back to Product.stock.
+ */
+export function calculateTotalStock(product: {
+  stock?: number;
+  variants?: Array<{ stock: number }> | null;
+  colorOptions?: unknown;
+}): number {
+  if (product.variants && product.variants.length > 0) {
+    return product.variants.reduce((sum, v) => sum + (v.stock || 0), 0);
+  }
+  const parsedColors = parseColorOptions(product.colorOptions, 0);
+  if (parsedColors.length > 0) {
+    return parsedColors.reduce((sum, c) => sum + (c.stock || 0), 0);
+  }
+  return product.stock || 0;
+}
+
 export type BundleItem = {
   title: string;
   description?: string;

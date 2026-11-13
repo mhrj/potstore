@@ -8,6 +8,7 @@ import { numberToWordsFa } from "@/lib/number-to-words";
 import { resolveCityCode } from "@/lib/postex";
 import ItemColorBadge from "@/features/catalog/components/ItemColorBadge";
 import ShippingScheduleNotice from "@/features/checkout/components/ShippingScheduleNotice";
+import OrderItemDetails, { GroupedOrderItems } from "@/features/checkout/components/OrderItemDetails";
 
 type Address = {
   id: string;
@@ -447,30 +448,9 @@ export default function CheckoutForm({
         <div className="rounded-2xl bg-white dark:bg-flora-900 dark:border dark:border-dust-50/10 p-6 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:shadow-none lg:sticky lg:top-24">
           <h2 className="font-black text-soil-900 dark:text-dust-50">خلاصه سفارش</h2>
 
-          <ul className="mt-4 space-y-3 text-xs text-soil-700/80 dark:text-dust-200/80">
-            {totals.lines.map((l) => (
-              <li
-                key={l.productId}
-                className="flex justify-between items-start gap-4"
-              >
-                <div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-soil-900 dark:text-dust-50">{l.name}</span>
-                    <ItemColorBadge colorData={l.colorData} />
-                  </div>
-                  <span className="text-[11px] text-soil-700/70 dark:text-dust-200/70 block mt-0.5">
-                    {toFa(l.quantity)} عدد{" "}
-                    {l.bundleSize > 1
-                      ? `(معادل ${toFa(Math.round(l.quantity / l.bundleSize))} بسته)`
-                      : ""}
-                  </span>
-                </div>
-                <span className="shrink-0 font-bold text-soil-900 dark:text-dust-50">
-                  {formatToman(l.lineTotalToman)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-4">
+            <GroupedOrderItems items={totals.lines} compact={true} />
+          </div>
 
           <dl className="mt-5 space-y-3 border-t border-soil-900/10 dark:border-dust-50/10 pt-5 text-sm">
             <div className="flex justify-between text-soil-900 dark:text-dust-50">

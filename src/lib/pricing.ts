@@ -19,6 +19,9 @@ export type PricedLine = {
   variantPriceToman?: number | null;
   slug: string;
   sku?: string | null;
+  material?: string | null;
+  diameterCm?: number | null;
+  heightCm?: number | null;
   name: string;
   imageUrl?: string | null;
   quantity: number;
@@ -45,6 +48,7 @@ export type PricedLine = {
     saveMoreToman: number;
   } | null;
   colorData?: unknown;
+  selectedColorHex?: string | null;
   colorAdjustment: number;
 };
 
@@ -140,6 +144,9 @@ type PriceInput = {
     id: string;
     slug: string;
     sku?: string | null;
+    material?: string | null;
+    diameterCm?: number | null;
+    heightCm?: number | null;
     name: string;
     basePriceToman: number;
     salePriceToman?: number | null;
@@ -153,6 +160,7 @@ type PriceInput = {
   tiers: Tier[];
   quantity: number;
   colorData?: unknown;
+  selectedColorHex?: string | null;
   colorAdjustment?: number;
   variantId?: string | null;
   variantTitle?: string | null;
@@ -164,6 +172,7 @@ export function priceLine({
   tiers,
   quantity,
   colorData,
+  selectedColorHex,
   colorAdjustment = 0,
   variantId,
   variantTitle,
@@ -215,6 +224,10 @@ export function priceLine({
       variantTitle: variantTitle ?? null,
       variantPriceToman: variantPriceToman ?? null,
       slug: product.slug,
+      sku: product.sku ?? null,
+      material: product.material ?? null,
+      diameterCm: product.diameterCm ?? null,
+      heightCm: product.heightCm ?? null,
       name: product.name,
       imageUrl: product.images?.[0]?.url ?? null,
       quantity: qty,
@@ -233,6 +246,7 @@ export function priceLine({
       tierLabel: hasSale ? 'تخفیف ویژه' : 'تک‌فروشی',
       nextTier: null,
       colorData: colorData ?? null,
+      selectedColorHex: selectedColorHex ?? null,
       colorAdjustment,
     };
   }
@@ -254,6 +268,10 @@ export function priceLine({
       variantTitle: variantTitle ?? null,
       variantPriceToman: variantPriceToman ?? null,
       slug: product.slug,
+      sku: product.sku ?? null,
+      material: product.material ?? null,
+      diameterCm: product.diameterCm ?? null,
+      heightCm: product.heightCm ?? null,
       name: product.name,
       imageUrl: product.images?.[0]?.url ?? null,
       quantity: qty,
@@ -272,6 +290,7 @@ export function priceLine({
       tierLabel: tier.label ?? (hasSale ? 'تخفیف ویژه' : CHANNEL_LABEL[resolveChannel(qty)]),
       nextTier: nextTierHint(tiers, bundleCount, effectiveBasePrice, product.basePriceToman),
       colorData: colorData ?? null,
+      selectedColorHex: selectedColorHex ?? null,
       colorAdjustment,
     };
   }
@@ -292,6 +311,9 @@ export function priceLine({
     variantPriceToman: variantPriceToman ?? null,
     slug: product.slug,
     sku: product.sku ?? null,
+    material: product.material ?? null,
+    diameterCm: product.diameterCm ?? null,
+    heightCm: product.heightCm ?? null,
     name: product.name,
     imageUrl: product.images?.[0]?.url ?? null,
     quantity: qty,
@@ -310,6 +332,7 @@ export function priceLine({
     tierLabel: tier.label ?? (hasSale ? 'تخفیف ویژه' : CHANNEL_LABEL[resolveChannel(qty)]),
     nextTier: nextTierHint(tiers, qty, effectiveBasePrice, product.basePriceToman),
     colorData: colorData ?? null,
+    selectedColorHex: selectedColorHex ?? null,
     colorAdjustment,
   };
 }

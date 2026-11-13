@@ -28,7 +28,6 @@ type LandingPageViewProps = {
     sampleProductName: string | null;
     tableRows: Array<{ q: string; p: number; d: string }>;
   };
-  motionVariant?: 'a' | 'b';
 };
 
 function renderFormattedText(text: string) {
@@ -50,7 +49,6 @@ export default function LandingPageView({
   landing,
   content,
   wholesaleHighlight,
-  motionVariant = 'a',
 }: LandingPageViewProps) {
   const ctaImage = landing.cta;
   const heroGlowRef = usePointerGlow<HTMLElement>();
@@ -58,12 +56,12 @@ export default function LandingPageView({
   const hero = (
     <section
       ref={heroGlowRef}
-      className="pt-20 pb-16 lg:pt-28 lg:pb-20 relative overflow-hidden bg-transparent"
+      className="pt-16 pb-12 lg:pt-28 lg:pb-20 relative overflow-hidden bg-transparent -mb-px"
     >
       {/* Pointer glow layer */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -inset-px transition-opacity duration-500 ease-out z-0 hidden lg:block"
+        className="pointer-events-none absolute inset-0 transition-opacity duration-500 ease-out z-0 hidden lg:block"
         style={{
           opacity: 'var(--glow-opacity, 0)',
           background:
@@ -71,9 +69,9 @@ export default function LandingPageView({
         }}
       />
       <Container className="relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-20 items-center">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-16">
           {/* Column 1: TEXT COLUMN (Appears on the RIGHT in RTL desktop) */}
-          <div className="w-full px-4 flex flex-col items-center lg:items-start text-center lg:text-right lg:col-span-5 lg:row-start-1">
+          <div className="w-full lg:w-5/12 flex flex-col items-center lg:items-start text-center lg:text-right">
             {/* Badge */}
             <span className="inline-flex items-center gap-2 rounded-full border border-dust-300/70 bg-dust-100/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-4 py-1.5 text-xs font-medium text-soil-700 dark:text-dust-200 backdrop-blur">
               <span className="size-1.5 rounded-full bg-dust-400 dark:bg-flora-300" />
@@ -87,12 +85,12 @@ export default function LandingPageView({
             />
 
             {/* Subtitle */}
-            <p className="mt-6 text-base sm:text-lg lg:text-xl leading-8 text-soil-700/80 dark:text-dust-200/80 text-center lg:text-right mx-auto lg:mx-0 max-w-md lg:max-w-xl px-4">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl leading-8 text-soil-700/80 dark:text-dust-200/80 text-center lg:text-right mx-auto lg:mx-0 max-w-md lg:max-w-xl">
               {content.home_hero_subtitle.body}
             </p>
 
             {/* Action Buttons */}
-            <div className="flex flex-col w-full sm:flex-row justify-center lg:justify-start gap-4 px-4 mt-10">
+            <div className="flex flex-col w-full sm:flex-row justify-center lg:justify-start gap-4 mt-6 sm:mt-8">
               <Link
                 href="#catalog"
                 className="group relative inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-8 py-4 text-sm sm:text-base font-bold shadow-lg shadow-flora-900/25 transition-all duration-300 hover:scale-105 hover:bg-flora-700 hover:shadow-2xl hover:shadow-flora-900/40 active:scale-[0.98]"
@@ -110,10 +108,26 @@ export default function LandingPageView({
                 <span className="text-flora-700 dark:text-flora-300 transition duration-300 group-hover:translate-x-1">←</span>
               </Link>
             </div>
+
+            {/* Desktop Stats (below buttons on desktop) */}
+            <div className="hidden lg:block w-full pt-8 mt-10 border-t border-soil-900/10 dark:border-transparent">
+              <dl className="flex items-center gap-6 sm:gap-8 divide-x divide-x-reverse divide-soil-900/10 dark:divide-transparent justify-start">
+                {[
+                  { k: '۴۲+', v: 'مدل گلدان' },
+                  { k: '۳۱', v: 'استان تحت پوشش' },
+                  { k: '۱۲٬۰۰۰+', v: 'سفارش موفق' },
+                ].map((s) => (
+                  <div key={s.v} className="px-3 sm:px-5 first:ps-0 last:pe-0 text-right">
+                    <dt className="text-3xl font-black text-soil-900 dark:text-dust-50">{s.k}</dt>
+                    <dd className="mt-1 text-xs text-soil-700/60 dark:text-dust-300/70">{s.v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           </div>
 
-          {/* Column 2: VIDEO COLUMN (Appears on the LEFT in RTL desktop) */}
-          <div className="lg:col-span-7 lg:row-start-1 lg:row-span-2 relative w-full aspect-video flex items-center justify-center px-4 my-8 lg:my-0 bg-transparent">
+          {/* Column 2: VIDEO / ILLUSTRATION COLUMN (Directly below buttons on mobile, Left in RTL desktop) */}
+          <div className="w-full lg:w-7/12 relative aspect-video flex items-center justify-center bg-transparent">
             <video 
               autoPlay 
               muted 
@@ -121,22 +135,22 @@ export default function LandingPageView({
               preload="metadata"
               poster="/hero-poster.jpg"
               aria-label="انیمیشن طراحی گلدان و گیاه"
-              className="w-full h-full object-contain mix-blend-screen scale-100 md:scale-110 lg:scale-[1.5] xl:scale-[1.6] transition-transform duration-700 pointer-events-none"
+              className="w-full h-full object-contain mix-blend-screen scale-105 sm:scale-110 lg:scale-[1.5] xl:scale-[1.6] transition-transform duration-700 pointer-events-none"
             >
               <source src="/hero-video.webm" type="video/webm" />
             </video>
           </div>
 
-          {/* Column 3: STATS SECTION (Appears after video on mobile, beneath text on desktop) */}
-          <div className="w-full px-4 lg:col-span-5 lg:row-start-2 order-last lg:order-none">
-            <dl className="flex items-center gap-6 sm:gap-8 pt-8 border-t border-soil-900/10 dark:border-dust-100/10 divide-x divide-x-reverse divide-soil-900/10 dark:divide-dust-100/10 justify-center lg:justify-start">
+          {/* Column 3: STATS SECTION (Appears after video on mobile, hidden on desktop) */}
+          <div className="w-full lg:hidden pt-4">
+            <dl className="flex items-center gap-6 sm:gap-8 pt-6 border-t border-soil-900/10 dark:border-transparent divide-x divide-x-reverse divide-soil-900/10 dark:divide-transparent justify-center">
               {[
                 { k: '۴۲+', v: 'مدل گلدان' },
                 { k: '۳۱', v: 'استان تحت پوشش' },
                 { k: '۱۲٬۰۰۰+', v: 'سفارش موفق' },
               ].map((s) => (
-                <div key={s.v} className="px-3 sm:px-5 first:ps-0 last:pe-0 text-center lg:text-right">
-                  <dt className="text-3xl font-black text-soil-900 dark:text-dust-50">{s.k}</dt>
+                <div key={s.v} className="px-3 sm:px-5 first:ps-0 last:pe-0 text-center">
+                  <dt className="text-2xl sm:text-3xl font-black text-soil-900 dark:text-dust-50">{s.k}</dt>
                   <dd className="mt-1 text-xs text-soil-700/60 dark:text-dust-300/70">{s.v}</dd>
                 </div>
               ))}
@@ -321,7 +335,7 @@ export default function LandingPageView({
   );
 
   return (
-    <main data-motion={motionVariant}>
+    <main>
       <DustToFlora
         hero={hero}
         trustBar={
@@ -334,37 +348,6 @@ export default function LandingPageView({
         wholesaleInquiry={<WholesaleInquiryForm />}
         trust={trust}
       />
-
-      {/* Motion Prototype Switcher Pill */}
-      <aside
-        role="region"
-        aria-label="تغییر حالت موشن"
-        className="fixed bottom-5 start-5 z-50 flex items-center gap-1.5 rounded-full border border-soil-900/15 bg-white/90 p-1.5 shadow-2xl backdrop-blur-md dark:border-dust-100/15 dark:bg-flora-950/90 text-xs font-semibold"
-      >
-        <span className="px-2 text-soil-700/80 dark:text-dust-200/80 hidden sm:inline">حالت حرکت:</span>
-        <Link
-          href="/?motion=a"
-          scroll={false}
-          className={`rounded-full px-3 py-1.5 transition-all ${
-            motionVariant === 'a'
-              ? 'bg-flora-900 text-white shadow-sm dark:bg-flora-600 dark:text-white font-bold'
-              : 'text-soil-700 hover:text-soil-950 dark:text-dust-200 dark:hover:text-white'
-          }`}
-        >
-          حالت الف (سریع)
-        </Link>
-        <Link
-          href="/?motion=b"
-          scroll={false}
-          className={`rounded-full px-3 py-1.5 transition-all ${
-            motionVariant === 'b'
-              ? 'bg-flora-900 text-white shadow-sm dark:bg-flora-600 dark:text-white font-bold'
-              : 'text-soil-700 hover:text-soil-950 dark:text-dust-200 dark:hover:text-white'
-          }`}
-        >
-          حالت ب (نرم)
-        </Link>
-      </aside>
     </main>
   );
 }

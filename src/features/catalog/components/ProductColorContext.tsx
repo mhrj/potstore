@@ -14,12 +14,14 @@ const ProductColorContext = createContext<ProductColorContextType | null>(null);
 export function ProductColorProvider({
   children,
   initialColor = null,
+  initialBundleColors = {},
 }: {
   children: React.ReactNode;
   initialColor?: string | null;
+  initialBundleColors?: Record<number, string>;
 }) {
   const [selectedColor, setSelectedColor] = useState<string | null>(initialColor);
-  const [selectedBundleColors, setSelectedBundleColors] = useState<Record<number, string>>({});
+  const [selectedBundleColors, setSelectedBundleColors] = useState<Record<number, string>>(initialBundleColors);
 
   const setSelectedBundleColor = (itemIndex: number, color: string) => {
     setSelectedBundleColors((prev) => ({

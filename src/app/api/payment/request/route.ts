@@ -293,6 +293,12 @@ export async function POST(req: Request) {
               colorAdjustment: cartItem.colorAdjustment,
             };
           }
+          if (cartItem?.selectedColorHex) {
+            itemColorData = {
+              ...(itemColorData || {}),
+              selectedColorHex: cartItem.selectedColorHex,
+            };
+          }
           if (isBundle && cartItem?.product) {
             const bItems = parseBundleItems(cartItem.product.bundleItems, cartItem.product.stock);
             itemColorData = {

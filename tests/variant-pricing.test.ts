@@ -109,3 +109,43 @@ test('Variant Pricing: priceCart with multiple variants of the same product', as
   assert.equal(cartTotals.payableToman, 420_000);
 });
 
+test('calculateTotalStock: dynamic stock from variants and color options', async (t) => {
+  const { calculateTotalStock } = await import('../src/lib/product-features');
+
+  await t.test('sums stock from variants and ignores base product.stock', () => {
+    const product = {
+      stock: 112, // base stock in DB
+      variants: [
+        { stock: 120 },
+        { stock: 120 },
+      ],
+    };
+
+    const total = calculateTotalStock(product);
+    assert.equal(total, 240);
+    assert.notEqual(total, 112);
+  });
+
+  await t.test('sums stock from colorOptions if variants are empty and ignores base stock', () => {
+    const product = {
+      stock: 112,
+      colorOptions: [
+        { hexCode: '#FFFFFF', stock: 120 },
+        { hexCode: '#000000', stock: 120 },
+      ],
+    };
+
+    const total = calculateTotalStock(product);
+    assert.equal(total, 240);
+  });
+
+  await t.test('falls back to base product.stock if no variants or colorOptions', () => {
+    const product = {
+      stock: 112,
+    };
+
+    const total = calculateTotalStock(product);
+    assert.equal(total, 112);
+  });
+});
+

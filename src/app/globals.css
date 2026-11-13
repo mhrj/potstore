@@ -211,33 +211,13 @@
 .stagger-reveal > :nth-child(5) { transition-delay: 200ms; }
 .stagger-reveal > :nth-child(6) { transition-delay: 240ms; }
 
-/* Prototype Variants (?motion=a|b) */
-[data-motion='a'] {
-  --glow-radius: 280px;
-  --glow-color: rgba(64, 145, 108, 0.16);
+:root {
+  --glow-radius: 320px;
+  --glow-color: rgba(64, 145, 108, 0.18);
 }
 
-[data-motion='a'] .reveal {
-  transition-duration: 250ms;
-  transition-timing-function: ease-out;
-}
-
-[data-motion='a'] .group:hover .card-hover-image {
-  transform: scale(1.02);
-}
-
-[data-motion='b'] {
-  --glow-radius: 400px;
-  --glow-color: rgba(64, 145, 108, 0.26);
-}
-
-[data-motion='b'] .reveal {
-  transition-duration: 500ms;
-  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-[data-motion='b'] .group:hover .card-hover-image {
-  transform: scale(1.04);
+.group:hover .card-hover-image {
+  transform: scale(1.03);
 }
 
 @page {

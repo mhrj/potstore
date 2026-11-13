@@ -9,6 +9,7 @@ import StatusBadge from '@/features/checkout/components/StatusBadge';
 import ItemColorBadge from '@/features/catalog/components/ItemColorBadge';
 import PrintInvoiceButton from '@/features/checkout/components/PrintInvoiceButton';
 import BundleDetailsAccordion from '@/features/checkout/components/BundleDetailsAccordion';
+import OrderItemDetails, { GroupedOrderItems } from '@/features/checkout/components/OrderItemDetails';
 import { isOrderStatus, ORDER_STATUS_LABELS, TIMELINE, formatCarrierName, getNextShippingDate } from '@/lib/orders';
 
 type Props = { params: Promise<{ id: string }> };
@@ -64,6 +65,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
       items: {
         select: {
           id: true,
+          productId: true,
           productSlug: true,
           productName: true,
           sku: true,
@@ -71,6 +73,9 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           material: true,
           diameterCm: true,
           heightCm: true,
+          variantId: true,
+          variantTitle: true,
+          isBundle: true,
           bundleSize: true,
           colorData: true,
           quantity: true,
@@ -252,109 +257,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           <h2 className="text-sm font-black text-soil-900 dark:text-dust-50 border-b border-soil-900/5 dark:border-dust-50/10 pb-2 print:text-xs print:pb-1">
             اقلام سفارش
           </h2>
-          <div className="mt-4 divide-y divide-soil-900/10 dark:divide-dust-50/10 print:mt-1">
-            {order.items.map((i) => {
-              const specs = renderItemSpecs(i);
-              const bundleSize = i.bundleSize && i.bundleSize > 1 ? i.bundleSize : 1;
-              const isBundle = bundleSize > 1;
-              const displayQty = isBundle ? Math.round(i.quantity / bundleSize) : i.quantity;
-              const displayUnitPrice = isBundle ? i.unitToman * bundleSize : i.unitToman;
-
-              return (
-                <div
-                  key={i.id}
-                  className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between print:flex-row print:items-center print:justify-between print:py-1 print:gap-2 print:break-inside-avoid"
-                >
-                  <div className="flex items-start sm:items-center gap-4 print:gap-2">
-                    {i.imageUrl ? (
-                      <img
-                        src={i.imageUrl}
-                        alt={i.productName}
-                        className="w-20 h-20 rounded-xl object-cover shrink-0 border border-soil-900/10 dark:border-dust-50/10 shadow-2xs dark:shadow-none print:w-10 print:h-10 print:rounded-md"
-                      />
-                    ) : (
-                      <div className="w-20 h-20 rounded-xl bg-dust-100 dark:bg-flora-900 border border-soil-900/10 dark:border-dust-50/10 flex items-center justify-center text-soil-700/40 dark:text-dust-400 shrink-0 print:w-10 print:h-10 print:rounded-md">
-                        <svg className="w-7 h-7 print:w-5 print:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                    <div className="space-y-1.5 print:space-y-0.5 print:text-[10px]">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                          href={`/products/${i.productSlug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-bold text-soil-900 dark:text-dust-50 hover:text-flora-700 dark:hover:text-flora-300 transition print:text-xs"
-                        >
-                          {i.productName}
-                        </Link>
-                        {isBundle && (
-                          <span className="inline-flex items-center rounded-md bg-flora-100 dark:bg-flora-900 px-2 py-0.5 text-[11px] font-bold text-flora-700 dark:text-flora-300 border border-flora-300 dark:border-flora-700 print:text-[9px] print:px-1.5 print:py-0">
-                            شامل {toFa(bundleSize)} عدد گلدان
-                          </span>
-                        )}
-                      </div>
-
-                      {i.sku && (
-                        <p className="text-xs text-soil-700/60 dark:text-dust-200/60 print:text-[9px]">
-                          کد کالا:{' '}
-                          <span className="font-mono font-medium" dir="ltr">
-                            {i.sku}
-                          </span>
-                        </p>
-                      )}
-
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-soil-700/75 dark:text-dust-200/75 print:text-[9px]">
-                        {specs && <span>{specs}</span>}
-                        {!isBundle && <ItemColorBadge colorData={i.colorData} />}
-                      </div>
-
-                      {isBundle && (
-                        <BundleDetailsAccordion
-                          bundleSize={bundleSize}
-                          bundleCount={displayQty}
-                          colorData={i.colorData}
-                          productBundleItems={i.product?.bundleItems}
-                        />
-                      )}
-
-                      <div className="flex items-center gap-2 flex-wrap text-xs text-soil-700/80 dark:text-dust-200/80 print:text-[9px]">
-                        <p>
-                          {isBundle ? (
-                            <>
-                              {toFa(displayQty)} بسته × {formatToman(displayUnitPrice)} ={' '}
-                              <span className="font-bold text-soil-900 dark:text-dust-50">
-                                {formatToman(i.lineTotalToman)}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              {toFa(displayQty)} عدد × {formatToman(displayUnitPrice)} ={' '}
-                              <span className="font-bold text-soil-900 dark:text-dust-50">
-                                {formatToman(i.lineTotalToman)}
-                              </span>
-                            </>
-                          )}
-                        </p>
-                        {i.tierLabel && (
-                          <span className="rounded-md bg-flora-50 dark:bg-flora-900/60 px-2 py-0.5 text-[11px] font-medium text-flora-700 dark:text-flora-300 border border-flora-300/60 dark:border-flora-700/60 print:text-[9px]">
-                            سطح: {i.tierLabel}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-0 border-soil-900/5 dark:border-dust-50/10 pt-2 sm:pt-0 shrink-0 print:border-0 print:pt-0">
-                    <span className="text-xs text-soil-700/60 dark:text-dust-200/60 sm:hidden">مبلغ کل:</span>
-                    <p className="font-bold text-flora-900 dark:text-flora-300 text-sm sm:text-base print:text-xs">
-                      {formatToman(i.lineTotalToman)}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="mt-4 print:mt-1">
+            <GroupedOrderItems items={order.items} linkTargetBlank={true} />
           </div>
         </section>
       </div>
