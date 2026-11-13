@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Issues are tracked in GitHub Issues for `mhrj/pot_shop`. See `docs/agents/issue-tracker.md`.
+Issues are tracked in GitHub Issues for `mhrj/potstore`. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 

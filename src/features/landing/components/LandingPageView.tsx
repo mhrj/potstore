@@ -33,165 +33,83 @@ export default function LandingPageView({
   content,
   wholesaleHighlight,
 }: LandingPageViewProps) {
-  const heroImage = landing.hero;
-  const journeyImage = landing.journey;
   const ctaImage = landing.cta;
 
   const hero = (
-    <section className="relative flex flex-col items-center justify-center text-center overflow-hidden pt-20 pb-16 bg-dust-50 dark:bg-flora-950 transition-colors duration-500">
-      {/* Background Decorative Orbs */}
-      <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-75 h-75 bg-flora-300/20 dark:bg-flora-500/20 blur-[100px] rounded-full pointer-events-none" />
-        <div className="absolute top-44 right-1/4 w-65 h-65 bg-dust-300/35 dark:bg-flora-900/40 blur-[100px] rounded-full pointer-events-none" />
-      </div>
-
-      <Container className="flex flex-col items-center justify-center text-center">
-        {/* 1. Badge, H1, Subtitle */}
-        <div className="flex flex-col items-center text-center max-w-3xl mx-auto">
-          <span className="inline-flex items-center gap-2 rounded-full border border-dust-300/70 bg-dust-100/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-4 py-1.5 text-xs font-medium text-soil-700 dark:text-dust-200 backdrop-blur">
-            <span className="size-1.5 rounded-full bg-dust-400 dark:bg-flora-300" />
-            از خاک خالی، تا رویش سبز
-          </span>
-
-          <Typewriter
-            text={content.home_hero_title?.body || 'به فضاهای خالی، جان بدهیم.'}
-            className="mt-6 mb-6 text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-tight font-black text-soil-900 dark:text-dust-50 text-center"
-          />
-
-          <p className="max-w-2xl text-base leading-8 text-soil-700/85 dark:text-dust-200/85 sm:text-lg mx-auto text-center">
-            {content.home_hero_subtitle.body}
-          </p>
-        </div>
-
-        {/* 2. Action Buttons */}
-        <div className="w-full flex flex-col sm:flex-row items-center justify-center gap-3 mt-6 sm:mt-8">
-          <Link
-            href="#catalog"
-            className="group relative inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-7 py-3.5 text-sm font-bold shadow-lg shadow-flora-900/25 transition-all duration-300 hover:scale-105 hover:bg-flora-700 hover:shadow-2xl hover:shadow-flora-900/40 active:scale-[0.98]"
-          >
-            <span className="inline-block transition duration-300 group-hover:rotate-12 group-hover:scale-125">
-              🌱
+    <section className="pt-16 pb-12 lg:pt-24 lg:pb-16 relative overflow-hidden bg-transparent">
+      <Container className="relative">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-20 items-center">
+          {/* Column 1: TEXT COLUMN (Appears on the RIGHT in RTL desktop) */}
+          <div className="w-full px-4 flex flex-col items-center lg:items-start text-center lg:text-right lg:col-span-5 lg:row-start-1">
+            {/* Badge */}
+            <span className="inline-flex items-center gap-2 rounded-full border border-dust-300/70 bg-dust-100/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-4 py-1.5 text-xs font-medium text-soil-700 dark:text-dust-200 backdrop-blur">
+              <span className="size-1.5 rounded-full bg-dust-400 dark:bg-flora-300" />
+              از خاک خالی، تا رویش سبز
             </span>
-            <span>دیدن محصولات</span>
-          </Link>
-          <Link
-            href="#wholesale-inquiry"
-            className="group inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full border border-soil-900/15 bg-white/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-7 py-3.5 text-sm font-bold text-soil-900 dark:text-dust-50 backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-white dark:hover:bg-flora-950 hover:border-soil-900/35 dark:hover:border-dust-100/30 hover:shadow-xl hover:shadow-soil-900/10 active:scale-[0.98]"
-          >
-            <span>خرید عمده و استعلام قیمت</span>
-            <span className="text-flora-700 dark:text-flora-300 transition duration-300 group-hover:translate-x-1">←</span>
-          </Link>
-        </div>
 
-        {/* 3. Stats */}
-        <dl className="flex justify-center items-center gap-6 sm:gap-10 mt-6 sm:mt-8 w-full max-w-lg mx-auto border-t border-soil-900/10 dark:border-dust-100/10 pt-5 divide-x divide-x-reverse divide-soil-900/10 dark:divide-dust-100/10">
-          {[
-            { k: '۴۲+', v: 'مدل گلدان' },
-            { k: '۳۱', v: 'استان تحت پوشش' },
-            { k: '۱۲٬۰۰۰+', v: 'سفارش موفق' },
-          ].map((s) => (
-            <div key={s.v} className="px-2 text-center">
-              <dt className="text-xl sm:text-2xl font-black text-soil-900 dark:text-dust-50">{s.k}</dt>
-              <dd className="mt-1 text-[10px] sm:text-xs text-soil-700/70 dark:text-dust-300/70">{s.v}</dd>
-            </div>
-          ))}
-        </dl>
-
-        {/* 4. The Video Container */}
-        <div className="w-full max-w-[100vw] sm:max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto aspect-video rounded-2xl md:rounded-3xl mt-6 md:mt-8 overflow-hidden shadow-2xl border border-soil-900/5 dark:border-dust-50/10">
-          <video 
-            autoPlay 
-            muted 
-            playsInline 
-            preload="metadata"
-            poster="/hero-poster.jpg"
-            aria-label="انیمیشن طراحی گلدان و گیاه"
-            className="w-full h-full object-cover mix-blend-multiply dark:brightness-[0.85] dark:contrast-[1.1]"
-          >
-            <source src="/hero-video.mp4" type="video/mp4" />
-          </video>
-        </div>
-      </Container>
-    </section>
-  );
-
-  const journey = (
-    <section className="py-24">
-      <Container className="max-w-3xl text-center">
-        <h2 className="text-3xl font-black text-soil-900 dark:text-dust-50 sm:text-4xl">
-          درباره پات استور
-        </h2>
-        <p className="mt-5 leading-8 text-soil-700/85 dark:text-dust-200/85 whitespace-pre-line">
-          از گلدون و خاک گرفته تا وسایل نگهداری گیاه، هرچی برای گل‌وگیاه‌هاتون لازم دارید، اینجا پیدا می‌کنید.
-          {'\n\n'}
-          چه تازه شروع کرده باشید، چه مدت‌هاست از گیاه‌هاتون مراقبت می‌کنید، سعی می‌کنیم انتخاب رو براتون راحت‌تر کنیم.
-        </p>
-        <p className="mt-5 text-base font-bold text-flora-700 dark:text-flora-300">
-          پات استور؛ برای حال خوب گیاه‌هاتون 🌱
-        </p>
-      </Container>
-
-      {journeyImage && (
-        <Container className="mt-16">
-          <div className="relative aspect-21/9 overflow-hidden rounded-pot bg-white dark:bg-flora-950 border border-soil-900/5 dark:border-dust-50/10 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:shadow-none">
-            <Image
-              src={journeyImage.url}
-              alt={journeyImage.alt ?? 'همراهی با گیاهان از خاک تا رویش'}
-              fill
-              sizes="(max-width: 1024px) 100vw, 80vw"
-              className="object-cover"
-              unoptimized={isUnoptimizedImage(journeyImage.url)}
+            {/* H1 Title with Typewriter */}
+            <Typewriter
+              text={content.home_hero_title?.body || 'به فضاهای خالی، جان بدهیم.'}
+              className="mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words text-soil-900 dark:text-dust-50 text-center lg:text-right"
             />
-          </div>
-        </Container>
-      )}
 
-      {/* Three equal cards on one baseline. */}
-      <Container className="mt-16 grid gap-6 md:grid-cols-3">
-        {[
-          {
-            title: 'خاک',
-            subtitle: 'بستر مناسب برای هر گیاه',
-            description:
-              'خاک‌های مختلف، کاربردهای متفاوتی دارند. با توجه به نیاز گیاه به رطوبت، هوادهی و زهکشی، بستر مناسب‌تری برای رشد آن انتخاب کنید.',
-            icon: '🏺',
-            card: 'bg-dust-200 dark:bg-flora-900',
-            accent: 'border-t-dust-400 dark:border-t-flora-300',
-          },
-          {
-            title: 'ریشه',
-            subtitle: 'گلدان مناسب، شروعی بهتر',
-            description:
-              'اندازه گلدان، فضای ریشه و خروج آب اضافی در سلامت گیاه اهمیت دارند. گلدانی انتخاب کنید که با اندازه و نیاز گیاهتان متناسب باشد.',
-            icon: '🪴',
-            card: 'bg-flora-100 dark:bg-flora-900',
-            accent: 'border-t-flora-300 dark:border-t-flora-300',
-          },
-          {
-            title: 'رویش',
-            subtitle: 'از کاشت تا مراقبت روزمره',
-            description:
-              'با انتخاب گلدان، خاک و لوازم مناسب، برای رسیدگی به گیاهانتان آماده‌تر باشید؛ چه در حال شروع باشید و چه بخواهید مجموعه‌تان را گسترش دهید.',
-            icon: '🌸',
-            card: 'bg-flora-300/50 dark:bg-flora-900',
-            accent: 'border-t-flora-500 dark:border-t-flora-300',
-          },
-        ].map((card) => (
-          <div
-            key={card.title}
-            className={`flex flex-col h-full rounded-pot border-t-4 border border-soil-900/5 dark:border-dust-100/10 ${card.accent} ${card.card} p-8 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.5)] transition duration-300 hover:-translate-y-1.5 hover:shadow-[0_22px_44px_-16px_rgba(62,39,35,0.32)] dark:hover:shadow-[0_22px_44px_-16px_rgba(0,0,0,0.7)]`}
-          >
-            <span
-              aria-hidden
-              className="grid size-12 place-items-center rounded-2xl bg-white/60 dark:bg-white/10 text-2xl"
-            >
-              {card.icon}
-            </span>
-            <h3 className="mt-5 text-xl font-black text-soil-900 dark:text-dust-50">{card.title}</h3>
-            <p className="mt-2 text-sm font-bold text-flora-700 dark:text-flora-300">{card.subtitle}</p>
-            <p className="mt-3 text-xs leading-6 text-soil-700/80 dark:text-dust-200/80">{card.description}</p>
+            {/* Subtitle */}
+            <p className="mt-6 text-base sm:text-lg lg:text-xl leading-8 text-soil-700/80 dark:text-dust-200/80 text-center lg:text-right mx-auto lg:mx-0 max-w-md lg:max-w-xl px-4">
+              {content.home_hero_subtitle.body}
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col w-full sm:flex-row justify-center lg:justify-start gap-4 px-4 mt-10">
+              <Link
+                href="#catalog"
+                className="group relative inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-8 py-4 text-sm sm:text-base font-bold shadow-lg shadow-flora-900/25 transition-all duration-300 hover:scale-105 hover:bg-flora-700 hover:shadow-2xl hover:shadow-flora-900/40 active:scale-[0.98]"
+              >
+                <span className="inline-block transition duration-300 group-hover:rotate-12 group-hover:scale-125">
+                  🌱
+                </span>
+                <span>دیدن محصولات</span>
+              </Link>
+              <Link
+                href="#wholesale-inquiry"
+                className="group inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full border border-soil-900/15 bg-white/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-8 py-4 text-sm sm:text-base font-bold text-soil-900 dark:text-dust-50 backdrop-blur transition-all duration-300 hover:scale-105 hover:bg-white dark:hover:bg-flora-950 hover:border-soil-900/35 dark:hover:border-dust-100/30 hover:shadow-xl hover:shadow-soil-900/10 active:scale-[0.98]"
+              >
+                <span>خرید عمده و استعلام قیمت</span>
+                <span className="text-flora-700 dark:text-flora-300 transition duration-300 group-hover:translate-x-1">←</span>
+              </Link>
+            </div>
           </div>
-        ))}
+
+          {/* Column 2: VIDEO COLUMN (Appears on the LEFT in RTL desktop) */}
+          <div className="lg:col-span-7 lg:row-start-1 lg:row-span-2 relative w-full aspect-video flex items-center justify-center px-4 my-8 lg:my-0 bg-transparent">
+            <video 
+              autoPlay 
+              muted 
+              playsInline 
+              preload="metadata"
+              poster="/hero-poster.jpg"
+              aria-label="انیمیشن طراحی گلدان و گیاه"
+              className="w-full h-full object-contain mix-blend-screen scale-100 md:scale-110 lg:scale-[1.5] xl:scale-[1.6] transition-transform duration-700 pointer-events-none"
+            >
+              <source src="/hero-video.webm" type="video/webm" />
+            </video>
+          </div>
+
+          {/* Column 3: STATS SECTION (Appears after video on mobile, beneath text on desktop) */}
+          <div className="w-full px-4 lg:col-span-5 lg:row-start-2 order-last lg:order-none">
+            <dl className="flex items-center gap-6 sm:gap-8 pt-8 border-t border-soil-900/10 dark:border-dust-100/10 divide-x divide-x-reverse divide-soil-900/10 dark:divide-dust-100/10 justify-center lg:justify-start">
+              {[
+                { k: '۴۲+', v: 'مدل گلدان' },
+                { k: '۳۱', v: 'استان تحت پوشش' },
+                { k: '۱۲٬۰۰۰+', v: 'سفارش موفق' },
+              ].map((s) => (
+                <div key={s.v} className="px-3 sm:px-5 first:ps-0 last:pe-0 text-center lg:text-right">
+                  <dt className="text-3xl font-black text-soil-900 dark:text-dust-50">{s.k}</dt>
+                  <dd className="mt-1 text-xs text-soil-700/60 dark:text-dust-300/70">{s.v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </div>
       </Container>
     </section>
   );
@@ -377,7 +295,6 @@ export default function LandingPageView({
         }
         whyChooseUs={<WhyChooseUs />}
         catalog={catalog}
-        journey={journey}
         wholesaleInquiry={<WholesaleInquiryForm />}
         trust={trust}
       />

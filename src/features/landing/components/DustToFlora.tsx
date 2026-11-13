@@ -28,7 +28,7 @@ export default function DustToFlora({
   trustBar?: React.ReactNode;
   whyChooseUs?: React.ReactNode;
   catalog: React.ReactNode;
-  journey: React.ReactNode;
+  journey?: React.ReactNode;
   wholesaleInquiry?: React.ReactNode;
   trust: React.ReactNode;
 }) {
@@ -115,7 +115,7 @@ export default function DustToFlora({
       {trustBar && <div className="relative z-10">{trustBar}</div>}
       {whyChooseUs && <div className="relative z-10">{whyChooseUs}</div>}
       <div className="relative z-10">{catalog}</div>
-      <div className="relative z-10">{journey}</div>
+      {journey && <div className="relative z-10">{journey}</div>}
       {wholesaleInquiry && <div className="relative z-10">{wholesaleInquiry}</div>}
       <div className="relative z-10">{trust}</div>
     </motion.div>

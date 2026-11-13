@@ -32,7 +32,7 @@ function formatHighlightedText(content: string) {
 
 export default function Typewriter({
   text,
-  className = 'mt-6 mb-6 text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-tight font-black text-soil-900 dark:text-dust-50 text-center',
+  className = 'mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words text-soil-900 dark:text-dust-50 text-center lg:text-right',
   as: Component = 'h1',
 }: TypewriterProps) {
   const shouldReduceMotion = useReducedMotion();
@@ -66,7 +66,7 @@ export default function Typewriter({
 
   return (
     <Component
-      className={`grid place-items-center text-center ${className}`}
+      className={`grid w-full place-items-center lg:place-items-start text-center lg:text-right break-words leading-tight ${className}`}
       aria-label={text}
     >
       {/* 
@@ -76,7 +76,7 @@ export default function Typewriter({
         preventing buttons and subsequent content from jumping while typing.
       */}
       <span
-        className="col-start-1 row-start-1 invisible select-none pointer-events-none"
+        className="col-start-1 row-start-1 block w-full invisible select-none pointer-events-none text-center lg:text-right break-words leading-tight"
         aria-hidden="true"
       >
         {formatHighlightedText(text)}
@@ -86,7 +86,7 @@ export default function Typewriter({
       </span>
 
       {/* Visible typing layer */}
-      <span className="col-start-1 row-start-1 text-center" aria-live="polite">
+      <span className="col-start-1 row-start-1 block w-full text-center lg:text-right break-words leading-tight" aria-live="polite">
         {formatHighlightedText(displayedText)}
         {!shouldReduceMotion && (
           <motion.span
