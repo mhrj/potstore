@@ -70,9 +70,9 @@ export default function LandingPageView({
         }}
       />
       <Container className="relative z-10">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-12">
-          {/* Column 1: TEXT COLUMN (Appears on the RIGHT in RTL desktop) */}
-          <div className="w-full lg:w-5/12 flex flex-col items-center lg:items-start text-center lg:text-right relative z-20">
+        <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-0 items-center">
+          {/* Block A: TEXT (Title + Subtitle) - Appears 1st on mobile, Col 1-5 Row 1 on desktop */}
+          <div className="order-1 lg:col-span-5 lg:col-start-1 lg:row-start-1 flex flex-col items-center lg:items-start text-center lg:text-right relative z-20">
             {/* Badge */}
             <span className="inline-flex items-center gap-2 rounded-full border border-dust-300/70 bg-dust-100/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-4 py-1.5 text-xs font-medium text-soil-700 dark:text-dust-200 backdrop-blur">
               <span className="size-1.5 rounded-full bg-dust-400 dark:bg-flora-300" />
@@ -89,9 +89,17 @@ export default function LandingPageView({
             <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl leading-8 text-soil-700/80 dark:text-dust-200/80 text-center lg:text-right mx-auto lg:mx-0 max-w-md lg:max-w-xl">
               {content.home_hero_subtitle.body}
             </p>
+          </div>
 
+          {/* Block B: VIDEO - Appears 2nd on mobile (below subtitle), Col 6-12 Row 1-2 on desktop */}
+          <div className="order-2 mt-6 lg:mt-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:row-span-2 lg:self-center relative z-10 pointer-events-none select-none flex items-center justify-center w-full max-w-[350px] sm:max-w-[500px] lg:max-w-[800px] mx-auto">
+            <HeroVideo />
+          </div>
+
+          {/* Block C: BUTTONS (CTA) - Appears 3rd on mobile (below video), Col 1-5 Row 2 on desktop */}
+          <div className="order-3 mt-6 lg:mt-8 lg:col-span-5 lg:col-start-1 lg:row-start-2 flex flex-col items-center lg:items-start w-full relative z-20">
             {/* Action Buttons */}
-            <div className="flex flex-col w-full sm:flex-row justify-center lg:justify-start gap-4 mt-6 sm:mt-8">
+            <div className="flex flex-col w-full sm:flex-row justify-center lg:justify-start gap-4">
               <Link
                 href="#catalog"
                 className="group relative inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-8 py-4 text-sm sm:text-base font-bold shadow-lg shadow-flora-900/25 transition-all duration-300 hover:scale-105 hover:bg-flora-700 hover:shadow-2xl hover:shadow-flora-900/40 active:scale-[0.98]"
@@ -127,13 +135,8 @@ export default function LandingPageView({
             </div>
           </div>
 
-          {/* Column 2: VIDEO / ILLUSTRATION COLUMN (Directly below buttons on mobile, Left in RTL desktop) */}
-          <div className="w-full lg:w-7/12 mt-8 lg:mt-0 relative z-10 pointer-events-none select-none">
-            <HeroVideo />
-          </div>
-
-          {/* Column 3: STATS SECTION (Appears after video on mobile, hidden on desktop) */}
-          <div className="w-full lg:hidden pt-2">
+          {/* Block D: MOBILE STATS - Appears 4th on mobile, hidden on desktop */}
+          <div className="order-4 w-full lg:hidden pt-2 mt-6">
             <dl className="flex items-center gap-6 sm:gap-8 pt-6 border-t border-soil-900/10 dark:border-transparent divide-x divide-x-reverse divide-soil-900/10 dark:divide-transparent justify-center">
               {[
                 { k: '۴۲+', v: 'مدل گلدان' },

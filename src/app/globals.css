@@ -169,26 +169,6 @@
   animation: pop-sprout 2.4s cubic-bezier(0.34, 1.56, 0.64, 1) infinite;
 }
 
-/* ==========================================================================
-   Hero Botanical Counter-Zoom Animation
-   Counteracts the baked-in camera zoom-out so the plant appears stable
-   and grounded without visual shrinking or loop seam glitches.
-   ========================================================================== */
-@keyframes botanical-counter-zoom {
-  0% {
-    transform: scale(1);
-  }
-  100% {
-    transform: scale(1.16);
-  }
-}
-
-.botanical-counter-zoom {
-  animation: botanical-counter-zoom 10.026s linear infinite;
-  transform-origin: center center;
-  will-change: transform;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .pixel-stem,
   .pixel-leaf-left,
@@ -197,11 +177,6 @@
     animation: none !important;
     transform: scale(1) !important;
     opacity: 1 !important;
-  }
-
-  .botanical-counter-zoom {
-    animation: none !important;
-    transform: scale(1.05) !important;
   }
 
   .reveal {
