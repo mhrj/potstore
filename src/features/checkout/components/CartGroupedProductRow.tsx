@@ -8,7 +8,7 @@ import { formatToman, toFa } from '@/lib/format';
 import { isUnoptimizedImage } from '@/lib/image-validation';
 import { numberToWordsFa } from '@/lib/number-to-words';
 import type { PricedLine } from '@/lib/pricing';
-import ItemColorBadge from '@/features/catalog/components/ItemColorBadge';
+import { ItemColorBadge } from '@/features/catalog';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { extractColorName, formatSpecs, formatBundleBreakdown } from './OrderItemDetails';
 

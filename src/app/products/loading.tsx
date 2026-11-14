@@ -11,10 +11,10 @@ export default function Loading() {
       <div
         aria-busy="true"
         aria-live="polite"
-        className="flex min-h-[50vh] flex-col items-center justify-center"
+        className="flex min-h-[50dvh] flex-col items-center justify-center"
       >
         <PixelPlantLoader size={80} />
-        <p className="mt-4 text-xs md:text-sm font-medium text-soil-700/70 tracking-wide animate-pulse">
+        <p className="mt-4 text-xs md:text-sm font-medium text-soil-700/70 animate-pulse">
           در حال بارگذاری...
         </p>
       </div>

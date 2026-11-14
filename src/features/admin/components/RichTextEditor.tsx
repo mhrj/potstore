@@ -324,7 +324,14 @@ export default function RichTextEditor({
       {editorError && (
         <div className="bg-red-50 dark:bg-red-950/50 border-b border-red-200 dark:border-red-800/40 px-3 py-1.5 text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
           <span>{editorError}</span>
-          <button type="button" onClick={() => setEditorError(null)} className="text-red-500 font-bold hover:text-red-700 cursor-pointer">✕</button>
+          <button
+            type="button"
+            onClick={() => setEditorError(null)}
+            aria-label="بستن پیام خطا"
+            className="text-red-500 font-bold hover:text-red-700 cursor-pointer focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:outline-none rounded-md px-1"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -336,7 +343,7 @@ export default function RichTextEditor({
       {/* Link Dialog Modal */}
       {linkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-soil-950/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-6 shadow-2xl dark:shadow-none text-right">
+          <div className="w-full max-w-sm rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-6 shadow-2xl dark:shadow-none text-start">
             <h3 className="text-base font-black text-soil-900 dark:text-dust-50">تنظیم پیوند</h3>
             <form onSubmit={handleApplyLink} className="mt-4 space-y-4">
               <div>
@@ -400,7 +407,7 @@ export default function RichTextEditor({
       {/* Image URL Modal */}
       {imageModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-soil-950/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-6 shadow-2xl dark:shadow-none text-right">
+          <div className="w-full max-w-sm rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-6 shadow-2xl dark:shadow-none text-start">
             <h3 className="text-base font-black text-soil-900 dark:text-dust-50">درج تصویر با لینک</h3>
             <form onSubmit={handleApplyImageUrl} className="mt-4 space-y-4">
               <div>

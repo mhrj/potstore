@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Container from '@/components/ui/Container';
 import { isUnoptimizedImage } from '@/lib/image-validation';
+import { sanitizeArticleHtml } from '@/lib/sanitize';
 
 type ArticleDetailViewProps = {
   article: {
@@ -129,7 +130,7 @@ export default function ArticleDetailView({
               [&_table]:w-full [&_table]:my-6 [&_table]:border-collapse
               [&_th]:border-b [&_th]:border-soil-900/20 dark:[&_th]:border-dust-50/20 [&_th]:p-3 [&_th]:text-start [&_th]:font-bold [&_th]:text-soil-900 dark:[&_th]:text-dust-50
               [&_td]:border-b [&_td]:border-soil-900/10 dark:[&_td]:border-dust-50/10 [&_td]:p-3 [&_td]:text-soil-800 dark:[&_td]:text-dust-200"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(article.content) }}
           />
 
           {/* Post Footer */}

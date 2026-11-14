@@ -12,7 +12,7 @@ import OrganicTextReveal from '@/features/landing/components/OrganicTextReveal';
 import HeroVideo from '@/features/landing/components/HeroVideo';
 import Container from '@/components/ui/Container';
 import Skeleton from '@/components/ui/Skeleton';
-import ProductCard from '@/features/catalog/components/ProductCard';
+import { ProductCard } from '@/features/catalog';
 import { isUnoptimizedImage } from '@/lib/image-validation';
 import { usePointerGlow } from '@/shared/hooks/usePointerGlow';
 
@@ -57,7 +57,7 @@ export default function LandingPageView({
   const hero = (
     <section
       ref={heroGlowRef}
-      className="pt-12 pb-8 sm:pt-16 sm:pb-12 lg:pt-28 lg:pb-20 relative overflow-hidden bg-transparent -mb-px"
+      className="relative overflow-hidden bg-transparent -mb-px min-h-[calc(100dvh-4rem)] flex flex-col justify-center pt-8 pb-8 sm:pt-12 sm:pb-12 lg:pt-16 lg:pb-16"
     >
       {/* Pointer glow layer */}
       <div
@@ -72,7 +72,7 @@ export default function LandingPageView({
       <Container className="relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-x-12 lg:gap-y-0 items-center">
           {/* Block A: TEXT (Title + Subtitle) - Appears 1st on mobile, Col 1-5 Row 1 on desktop */}
-          <div className="order-1 lg:col-span-5 lg:col-start-1 lg:row-start-1 flex flex-col items-center lg:items-start text-center lg:text-right relative z-20">
+          <div className="order-1 lg:col-span-5 lg:col-start-1 lg:row-start-1 flex flex-col items-center lg:items-start text-center lg:text-start relative z-20">
             {/* Badge */}
             <span className="inline-flex items-center gap-2 rounded-full border border-dust-300/70 bg-dust-100/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-4 py-1.5 text-xs font-medium text-soil-700 dark:text-dust-200 backdrop-blur">
               <span className="size-1.5 rounded-full bg-dust-400 dark:bg-flora-300" />
@@ -82,11 +82,11 @@ export default function LandingPageView({
             {/* H1 Title with Organic Text Reveal */}
             <OrganicTextReveal
               text={content.home_hero_title?.body || 'به فضاهای خالی، جان بدهیم.'}
-              className="mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words text-soil-900 dark:text-dust-50 text-center lg:text-right"
+              className="mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words text-soil-900 dark:text-dust-50 text-center lg:text-start"
             />
 
             {/* Subtitle */}
-            <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl leading-8 text-soil-700/80 dark:text-dust-200/80 text-center lg:text-right mx-auto lg:mx-0 max-w-md lg:max-w-xl">
+            <p className="mt-4 sm:mt-6 text-base sm:text-lg lg:text-xl leading-8 text-soil-700/80 dark:text-dust-200/80 text-center lg:text-start mx-auto lg:mx-0 max-w-md lg:max-w-xl">
               {content.home_hero_subtitle.body}
             </p>
           </div>
@@ -126,7 +126,7 @@ export default function LandingPageView({
                   { k: '۳۱', v: 'استان تحت پوشش' },
                   { k: '۱۲٬۰۰۰+', v: 'سفارش موفق' },
                 ].map((s) => (
-                  <div key={s.v} className="px-3 sm:px-5 first:ps-0 last:pe-0 text-right">
+                  <div key={s.v} className="px-3 sm:px-5 first:ps-0 last:pe-0 text-start">
                     <dt className="text-3xl font-black text-soil-900 dark:text-dust-50">{s.k}</dt>
                     <dd className="mt-1 text-xs text-soil-700/60 dark:text-dust-300/70">{s.v}</dd>
                   </div>
@@ -247,7 +247,7 @@ export default function LandingPageView({
                   <table className="w-full text-start text-xs sm:text-sm">
                     <caption className="sr-only">جدول تخفیف خودکار و پلکانی بر اساس تعداد سفارش</caption>
                     <thead>
-                      <tr className="border-b border-flora-100/15 text-flora-200/80">
+                      <tr className="border-b border-flora-100/15 text-flora-100 font-bold">
                         <th scope="col" className="pb-3 text-start font-bold">
                           تعداد خرید
                         </th>
@@ -264,10 +264,10 @@ export default function LandingPageView({
                         <td className="py-4 font-bold text-white whitespace-nowrap">
                           {toFa('1')} تا {toFa('4')} عدد
                         </td>
-                        <td className="py-4 text-flora-100/90 font-medium whitespace-nowrap">
+                        <td className="py-4 text-flora-100 font-medium whitespace-nowrap">
                           قیمت پایه
                         </td>
-                        <td className="py-4 text-flora-100/70">
+                        <td className="py-4 text-flora-100/90">
                           مناسب برای خرید شخصی و گیاهان خانگی
                         </td>
                       </tr>
@@ -280,7 +280,7 @@ export default function LandingPageView({
                             {toFa('15')}٪ تخفیف
                           </span>
                         </td>
-                        <td className="py-4 text-flora-100/80 font-medium">
+                        <td className="py-4 text-flora-100 font-medium">
                           ایده‌آل برای کافه‌ها، رستوران‌های کوچک و دفاتر
                         </td>
                       </tr>
@@ -293,7 +293,7 @@ export default function LandingPageView({
                             {toFa('30')}٪ تخفیف
                           </span>
                         </td>
-                        <td className="py-4 text-flora-100/80 font-medium">
+                        <td className="py-4 text-flora-100 font-medium">
                           مناسب برای استارتاپ‌ها و مجموعه‌های در حال رشد
                         </td>
                       </tr>
@@ -301,7 +301,7 @@ export default function LandingPageView({
                   </table>
                 </div>
 
-                <p className="mt-4 text-[11px] sm:text-xs leading-6 text-flora-100/60 font-medium">
+                <p className="mt-4 text-[11px] sm:text-xs leading-6 text-flora-100/85 font-medium">
                   * تخفیف‌ها به صورت خودکار روی سبد خرید شما اعمال می‌شوند.
                 </p>
 

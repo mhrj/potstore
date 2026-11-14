@@ -32,17 +32,10 @@
   body {
     overscroll-behavior-y: none;
   }
-}
 
-@keyframes gradient-flow {
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
+  :focus-visible {
+    outline: 2px solid var(--color-flora-500, #40916c);
+    outline-offset: 2px;
   }
 }
 
@@ -53,11 +46,6 @@
   50% {
     opacity: 0.35;
   }
-}
-
-.animate-text-gradient {
-  background-size: 250% auto;
-  animation: gradient-flow 3.5s ease-in-out infinite;
 }
 
 /* ==========================================================================
@@ -78,17 +66,6 @@
   92%, 100% {
     transform: scaleY(0);
     opacity: 0;
-  }
-}
-
-@keyframes pop-leaf {
-  0% {
-    opacity: 0;
-    transform: scale(0);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
   }
 }
 
@@ -170,6 +147,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
   .pixel-stem,
   .pixel-leaf-left,
   .pixel-leaf-right,
@@ -220,19 +206,54 @@
   transform: scale(1.03);
 }
 
+/* ==========================================================================
+   Cross-Browser Compatibility (Safari / Firefox / Edge)
+   ========================================================================== */
+
+/* Safari -webkit-backdrop-filter support */
+@supports (-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px)) {
+  .backdrop-blur {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .backdrop-blur-sm {
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  .backdrop-blur-md {
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+  }
+  .backdrop-blur-xs {
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+}
+
+/* Firefox & WebKit Scrollbar styling & hide utilities */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @page {
-  size: A4;
-  margin: 10mm;
+  size: A4 portrait;
+  margin: 12mm 15mm;
 }
 
 @media print {
   body {
     background-color: #ffffff !important;
     color: #1a1a1a !important;
+    font-size: 11pt !important;
+    line-height: 1.4 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-  /* Hide the chat widget, sidebars, and headers on print */
+  /* Hide interactive widgets, timeline, actions, and sidebars on print */
   .no-print,
   .print\:hidden {
     display: none !important;

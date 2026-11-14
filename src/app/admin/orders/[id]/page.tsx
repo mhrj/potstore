@@ -3,13 +3,9 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
 import { formatToman, formatDateFa, toFa } from '@/lib/format';
-import OrderStatusBadge from '@/features/admin/components/OrderStatusBadge';
-import OrderStatusForm from '@/features/admin/components/OrderStatusForm';
-import StatusBadge from '@/features/checkout/components/StatusBadge';
-import ItemColorBadge from '@/features/catalog/components/ItemColorBadge';
-import PrintInvoiceButton from '@/features/checkout/components/PrintInvoiceButton';
-import BundleDetailsAccordion from '@/features/checkout/components/BundleDetailsAccordion';
-import OrderItemDetails, { GroupedOrderItems } from '@/features/checkout/components/OrderItemDetails';
+import { OrderStatusBadge, OrderStatusForm } from '@/features/admin';
+import { StatusBadge, PrintInvoiceButton, BundleDetailsAccordion, OrderItemDetails, GroupedOrderItems } from '@/features/checkout';
+import { ItemColorBadge } from '@/features/catalog';
 import { isOrderStatus, ORDER_STATUS_LABELS, TIMELINE, formatCarrierName, getNextShippingDate } from '@/lib/orders';
 
 type Props = { params: Promise<{ id: string }> };

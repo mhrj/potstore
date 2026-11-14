@@ -6,7 +6,7 @@ import {
   calculateLift,
   type ScorableProduct,
 } from './scoring';
-import type { ProductCardData } from '@/features/catalog/components/ProductCard';
+import type { ProductCardData } from '@/features/catalog';
 
 type ProductRelationRow = {
   id: string;

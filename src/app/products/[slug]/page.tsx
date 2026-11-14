@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
-import ProductDetailView from '@/features/catalog/components/ProductDetailView';
-import { getProductRecommendations } from '@/features/recommendations/rebuild';
+import { ProductDetailView } from '@/features/catalog';
+import { getProductRecommendations } from '@/features/recommendations/server';
 
 export const dynamic = 'force-dynamic';
 

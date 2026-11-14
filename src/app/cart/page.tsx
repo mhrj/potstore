@@ -1,7 +1,7 @@
 import { requireUser } from '@/lib/auth';
 import { getCartTotals } from '@/lib/cart';
 import { prisma } from '@/lib/prisma';
-import CartView from '@/features/checkout/components/CartView';
+import { CartView } from '@/features/checkout';
 
 export default async function CartPage() {
   const user = await requireUser();

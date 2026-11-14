@@ -6,7 +6,7 @@ import ProductGallery from '@/features/catalog/components/ProductGallery';
 import ColorPicker from '@/features/catalog/components/ColorPicker';
 import { ProductColorProvider } from '@/features/catalog/components/ProductColorContext';
 import Container from '@/components/ui/Container';
-import RelatedProducts from '@/features/recommendations/RelatedProducts';
+import { RelatedProducts } from '@/features/recommendations';
 import type { ProductCardData } from '@/features/catalog/components/ProductCard';
 
 type ProductDetailViewProps = {
@@ -120,7 +120,7 @@ export default function ProductDetailView({
   };
 
   return (
-    <Container className="py-10 lg:py-16">
+    <Container className="py-10 pb-28 lg:py-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/auth';
-import OrderDetailView from '@/features/checkout/components/OrderDetailView';
+import { OrderDetailView } from '@/features/checkout';
 
 type Props = { params: Promise<{ id: string }> };
 

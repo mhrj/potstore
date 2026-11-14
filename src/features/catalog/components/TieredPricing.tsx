@@ -143,6 +143,12 @@ export default function TieredPricing({
     defaultVariant?.id ?? null,
   );
 
+  useEffect(() => {
+    if (hasVariants && defaultVariant && (!selectedVariantId || !product.variants?.some((v) => v.id === selectedVariantId))) {
+      setSelectedVariantId(defaultVariant.id);
+    }
+  }, [hasVariants, defaultVariant, selectedVariantId, product.variants]);
+
   const activeVariant = useMemo(() => {
     if (!hasVariants || !product.variants) return null;
     return (
@@ -319,6 +325,16 @@ export default function TieredPricing({
 
   const singleColors = useMemo(() => product.colorOptions ?? [], [product.colorOptions]);
   const hasColors = !isBundle && singleColors.length > 0;
+
+  useEffect(() => {
+    if (hasColors && singleColors.length > 0 && colorCtx && !colorCtx.selectedColor) {
+      const firstAvailable = singleColors.find((c) => c.stock > 0) ?? singleColors[0];
+      if (firstAvailable) {
+        colorCtx.setSelectedColor(firstAvailable.hexCode);
+      }
+    }
+  }, [hasColors, singleColors, colorCtx]);
+
   const selectedColorOpt = useMemo(() => {
     if (!hasColors || !colorCtx?.selectedColor) return null;
     return (
@@ -552,7 +568,12 @@ export default function TieredPricing({
         return;
       }
       setAdded(true);
-      setCount(minCount);
+      const resetCount = isBundle
+        ? minCount
+        : product.minOrderQuantity && product.minOrderQuantity > 1
+          ? minCount
+          : 1;
+      setCount(resetCount);
       setShowToast(true);
       router.refresh();
       setTimeout(() => {
@@ -651,7 +672,7 @@ export default function TieredPricing({
                   }}
                   aria-pressed={isSelected}
                   aria-label={`${v.title} - ${formatToman(v.priceToman)} تومان${isOutOfStock ? ' (ناموجود)' : ''}`}
-                  className={`group relative flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs transition-all ${
+                  className={`group relative flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs transition-all focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none focus-visible:ring-offset-2 dark:focus-visible:ring-offset-flora-950 ${
                     isSelected
                       ? 'border-flora-600 bg-flora-50/80 dark:bg-flora-950/80 dark:border-flora-500 shadow-xs ring-1 ring-flora-600 dark:ring-flora-500'
                       : 'border-soil-900/10 dark:border-dust-50/10 bg-dust-50/50 dark:bg-flora-950/40 hover:border-soil-900/25 dark:hover:border-dust-50/30'
@@ -669,9 +690,9 @@ export default function TieredPricing({
                   <span className="font-bold text-soil-900 dark:text-dust-50 text-sm">
                     {v.title}
                   </span>
-                  <span className="font-bold text-flora-800 dark:text-flora-300 mr-1.5">
+                  <span className="font-bold text-flora-800 dark:text-flora-300 me-1.5">
                     {formatToman(v.priceToman)}
-                    <span className="text-[10px] font-normal text-soil-700/70 dark:text-dust-200/70 mr-1">
+                    <span className="text-[10px] font-normal text-soil-700/70 dark:text-dust-200/70 me-1">
                       تومان
                     </span>
                   </span>
@@ -828,8 +849,8 @@ export default function TieredPricing({
         )}
 
       {allowBatch && sorted.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900">
+          <table className="w-full min-w-[340px] text-sm">
             <caption className="sr-only">ماتریس قیمت بر اساس تعداد</caption>
             <thead className="bg-dust-50 dark:bg-flora-950">
               <tr className="text-soil-700/70 dark:text-dust-200/70">
@@ -919,10 +940,13 @@ export default function TieredPricing({
               onClick={() => setCount((c) => clamp(c - 1))}
               disabled={count <= minCount}
               aria-label={isBundle ? 'کاهش تعداد بسته' : 'کاهش تعداد'}
-              className="grid size-9 place-items-center rounded-full text-lg font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 disabled:opacity-35"
+              className="grid size-9 place-items-center rounded-full text-lg font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 disabled:opacity-35 focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none"
             >
               −
             </button>
+            <label htmlFor="quantity-input" className="sr-only">
+              {isBundle ? 'تعداد بسته سفارش' : 'تعداد سفارش'}
+            </label>
             <input
               id="quantity-input"
               name="quantity"
@@ -934,7 +958,7 @@ export default function TieredPricing({
               value={count}
               onChange={(e) => setCount(clamp(Number(e.target.value)))}
               aria-label={isBundle ? 'تعداد بسته سفارش' : 'تعداد سفارش'}
-              className="w-16 border-0 bg-transparent text-center text-base font-black text-soil-900 dark:text-dust-50 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-16 border-0 bg-transparent text-center text-base font-black text-soil-900 dark:text-dust-50 outline-none rounded-lg focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
             />
             <motion.button
               type="button"
@@ -942,7 +966,7 @@ export default function TieredPricing({
               animate={shakePlus ? { x: [-5, 5, -5, 5, -2, 2, 0] } : { x: 0 }}
               transition={{ duration: 0.35 }}
               aria-label={isBundle ? 'افزایش تعداد بسته' : 'افزایش تعداد'}
-              className={`grid size-9 place-items-center rounded-full text-lg font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 ${
+              className={`grid size-9 place-items-center rounded-full text-lg font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none ${
                 count >= maxCount ? 'opacity-40 hover:bg-red-50 dark:hover:bg-red-950/40' : ''
               }`}
             >
@@ -1007,7 +1031,7 @@ export default function TieredPricing({
                 key={t.minQuantity}
                 type="button"
                 onClick={() => setCount(clamp(t.minQuantity))}
-                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+                className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none ${
                   count >= t.minQuantity &&
                   resolveTier(sorted, count, effectiveBasePrice, product.basePriceToman).minQuantity === t.minQuantity
                     ? 'bg-flora-900 text-white dark:bg-flora-700'
@@ -1028,7 +1052,7 @@ export default function TieredPricing({
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               onClick={() => setCount(clamp(hint.minQuantity))}
-              className="mt-4 block w-full rounded-xl bg-dust-100 dark:bg-flora-900/50 px-4 py-3 text-start text-xs leading-6 text-soil-700 dark:text-dust-200 transition-colors hover:bg-dust-200 dark:hover:bg-flora-950"
+              className="mt-4 block w-full rounded-xl bg-dust-100 dark:bg-flora-900/50 px-4 py-3 text-start text-xs leading-6 text-soil-700 dark:text-dust-200 transition-colors hover:bg-dust-200 dark:hover:bg-flora-950 focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none"
             >
               <span className="font-bold text-dust-500 dark:text-dust-400">
                 {toFa(hint.minQuantity - count)} {isBundle ? 'بسته' : 'عدد'} دیگر
@@ -1380,7 +1404,7 @@ export default function TieredPricing({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.95 }}
             transition={{ duration: 0.25 }}
-            className="fixed bottom-6 left-6 z-50 flex items-center gap-3.5 rounded-2xl bg-flora-950 text-white dark:bg-flora-900 dark:border dark:border-dust-50/20 px-5 py-3.5 shadow-2xl shadow-black/30"
+            className="fixed bottom-22 end-4 sm:bottom-6 sm:start-6 z-50 flex items-center gap-3.5 rounded-2xl bg-flora-950 text-white dark:bg-flora-900 dark:border dark:border-dust-50/20 px-5 py-3.5 shadow-2xl shadow-black/30"
             role="status"
             aria-live="polite"
           >
@@ -1395,7 +1419,7 @@ export default function TieredPricing({
             </div>
             <Link
               href="/cart"
-              className="mr-2 rounded-xl bg-flora-500 hover:bg-flora-400 text-flora-950 px-3 py-1.5 text-xs font-black transition-colors"
+              className="me-2 rounded-xl bg-flora-500 hover:bg-flora-400 text-flora-950 px-3 py-1.5 text-xs font-black transition-colors"
             >
               مشاهده سبد
             </Link>

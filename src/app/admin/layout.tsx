@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { requireAdmin } from '@/lib/auth';
-import GlobalSearch from '@/features/admin/components/GlobalSearch';
+import { GlobalSearch } from '@/features/admin';
 
 const NAV = [
   { href: '/admin', label: 'داشبورد' },
@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="grid gap-8 lg:grid-cols-12 print:block">
         <aside className="lg:col-span-3 print:hidden no-print">
           <nav className="sticky top-6 rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-950 p-4">
-            <p className="px-3 pb-3 text-[11px] font-bold uppercase tracking-wider text-soil-700/50 dark:text-dust-200/50">
+            <p className="px-3 pb-3 text-[11px] font-bold text-soil-700/50 dark:text-dust-200/50">
               پنل مدیریت
             </p>
             <GlobalSearch />

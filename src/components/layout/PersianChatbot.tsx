@@ -106,7 +106,7 @@ export default function PersianChatbot() {
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? 'بستن گفتگو' : 'گفتگو با دستیار پات استور'}
         aria-expanded={open}
-        className="fixed bottom-5 left-5 z-50 grid size-14 place-items-center rounded-full bg-flora-900 text-white shadow-xl shadow-flora-900/30 transition hover:bg-flora-700 active:scale-95"
+        className="fixed bottom-5 end-5 z-40 grid size-14 place-items-center rounded-full bg-flora-900 text-white shadow-xl shadow-flora-900/30 transition hover:bg-flora-700 active:scale-95 focus-visible:ring-4 focus-visible:ring-flora-400 focus-visible:outline-none focus-visible:ring-offset-2"
       >
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
@@ -131,16 +131,26 @@ export default function PersianChatbot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.97 }}
             transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-            className="fixed bottom-24 left-5 z-50 flex h-[min(34rem,72dvh)] w-[min(23rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-pot bg-white dark:bg-flora-950 border border-soil-900/10 dark:border-dust-100/10 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.8)]"
+            className="fixed bottom-24 end-5 z-40 flex h-[min(34rem,72dvh)] w-[min(23rem,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-pot bg-white dark:bg-flora-950 border border-soil-900/10 dark:border-dust-100/10 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.8)]"
           >
-            <header className="flex items-center gap-3 bg-flora-900 px-5 py-4 text-white">
-              <span className="grid size-9 place-items-center rounded-full bg-flora-500/30 text-lg">
-                🌿
-              </span>
-              <div className="flex-1">
-                <p className="text-sm font-black">دستیار پات استور</p>
-                <p className="text-[11px] text-flora-100/70">پاسخ‌گویی فوری · ۲۴ ساعته</p>
+            <header className="flex items-center justify-between gap-3 bg-flora-900 px-5 py-4 text-white">
+              <div className="flex items-center gap-3">
+                <span className="grid size-9 place-items-center rounded-full bg-flora-500/30 text-lg">
+                  🌿
+                </span>
+                <div>
+                  <p className="text-sm font-black">دستیار پات استور</p>
+                  <p className="text-[11px] text-flora-100/70">پاسخ‌گویی فوری · ۲۴ ساعته</p>
+                </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="بستن پنجره گفتگو"
+                className="grid size-8 place-items-center rounded-full text-white/80 hover:text-white hover:bg-white/10 transition focus-visible:ring-2 focus-visible:ring-white focus-visible:outline-none"
+              >
+                ✕
+              </button>
             </header>
 
             <div
@@ -211,21 +221,24 @@ export default function PersianChatbot() {
               }}
               className="flex items-center gap-2 border-t border-soil-900/5 dark:border-dust-100/10 bg-white dark:bg-flora-950 p-3"
             >
+              <label htmlFor="chatbot-input" className="sr-only">
+                متن پیام برای گفتگو با دستیار هوشمند
+              </label>
               <input
                 id="chatbot-input"
                 name="message"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="سوالت رو بنویس…"
-                aria-label="متن پیام"
+                aria-label="متن پیام برای گفتگو با دستیار هوشمند"
                 maxLength={500}
-                className="flex-1 rounded-full bg-dust-50 dark:bg-flora-900 px-4 py-2.5 text-[13px] text-soil-900 dark:text-dust-50 outline-none placeholder:text-soil-700/45 dark:placeholder:text-dust-300/45 focus:ring-2 focus:ring-flora-500/30"
+                className="flex-1 rounded-full bg-dust-50 dark:bg-flora-900 px-4 py-2.5 text-[13px] text-soil-900 dark:text-dust-50 outline-none placeholder:text-soil-700/45 dark:placeholder:text-dust-300/45 focus:ring-2 focus:ring-flora-500/30 focus-visible:ring-2 focus-visible:ring-flora-500 focus-visible:outline-none"
               />
               <button
                 type="submit"
                 disabled={loading || !input.trim()}
                 aria-label="ارسال پیام"
-                className="grid size-10 shrink-0 place-items-center rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 transition-colors hover:bg-flora-700 disabled:opacity-40 cursor-pointer"
+                className="grid size-10 shrink-0 place-items-center rounded-full bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 transition-colors hover:bg-flora-700 disabled:opacity-40 cursor-pointer focus-visible:ring-2 focus-visible:ring-flora-400 focus-visible:outline-none"
               >
                 ↑
               </button>

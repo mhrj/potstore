@@ -3,9 +3,8 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
 import { formatToman, formatDateFa, toFa } from '@/lib/format';
-import OrderStatusBadge from '@/features/admin/components/OrderStatusBadge';
-import StatusBadge from '@/features/checkout/components/StatusBadge';
-import UserManagementActions from '@/features/admin/components/UserManagementActions';
+import { OrderStatusBadge, UserManagementActions } from '@/features/admin';
+import { StatusBadge, groupOrderItems } from '@/features/checkout';
 import { formatCarrierName } from '@/lib/orders';
 
 type Props = {
@@ -60,11 +59,18 @@ export default async function AdminUserDetailPage({ params }: Props) {
         refId: true,
         trackingCode: true,
         items: {
-          take: 4,
           select: {
             id: true,
-            imageUrl: true,
+            productId: true,
             productName: true,
+            imageUrl: true,
+            quantity: true,
+            unitToman: true,
+            lineTotalToman: true,
+            variantTitle: true,
+            colorData: true,
+            isBundle: true,
+            bundleSize: true,
           },
         },
         _count: { select: { items: true } },
@@ -239,65 +245,75 @@ export default async function AdminUserDetailPage({ params }: Props) {
         ) : (
           <div className="p-5">
             <ul className="space-y-4">
-              {orders.map((order) => (
-                <li key={order.id}>
-                  <Link
-                    href={`/admin/orders/${order.id}`}
-                    className="group block rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-dust-50/50 dark:bg-flora-950/60 p-5 transition hover:border-soil-900/25 dark:hover:border-dust-50/20 hover:bg-white dark:hover:bg-flora-900 hover:shadow-md dark:hover:shadow-none"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soil-900/5 dark:border-dust-50/5 pb-4">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="font-mono text-sm font-bold text-soil-900 dark:text-dust-50">
-                          {toFa(order.orderNumber)}
+              {orders.map((order) => {
+                const groupedProducts = groupOrderItems(order.items);
+                const firstProduct = groupedProducts[0];
+                const otherProductsCount = Math.max(0, groupedProducts.length - 1);
+
+                return (
+                  <li key={order.id}>
+                    <Link
+                      href={`/admin/orders/${order.id}`}
+                      className="group block rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-dust-50/50 dark:bg-flora-950/60 p-5 transition hover:border-soil-900/25 dark:hover:border-dust-50/20 hover:bg-white dark:hover:bg-flora-900 hover:shadow-md dark:hover:shadow-none"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-soil-900/5 dark:border-dust-50/5 pb-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="font-mono text-sm font-bold text-soil-900 dark:text-dust-50">
+                            {toFa(order.orderNumber)}
+                          </span>
+                          <OrderStatusBadge status={order.status} />
+                          <StatusBadge kind="payment" value={order.paymentStatus} />
+                        </div>
+                        <span className="text-xs text-soil-700/60 dark:text-dust-200/60">
+                          {formatDateFa(order.createdAt)}
                         </span>
-                        <OrderStatusBadge status={order.status} />
-                        <StatusBadge kind="payment" value={order.paymentStatus} />
                       </div>
-                      <span className="text-xs text-soil-700/60 dark:text-dust-200/60">
-                        {formatDateFa(order.createdAt)}
-                      </span>
-                    </div>
 
-                    {/* Item Thumbnails and Names Summary */}
-                    <div className="flex flex-wrap items-center gap-4 py-4">
-                      {order.items.length > 0 && (
-                        <div className="flex -space-x-3 rtl:space-x-reverse shrink-0">
-                          {order.items.slice(0, 3).map((item, idx) =>
-                            item.imageUrl ? (
-                              <img
-                                key={item.id || idx}
-                                src={item.imageUrl}
-                                alt={item.productName}
-                                className="relative z-10 w-12 h-12 rounded-full border-2 border-white dark:border-flora-900 object-cover"
-                              />
-                            ) : (
-                              <div
-                                key={item.id || idx}
-                                className="relative z-10 flex w-12 h-12 items-center justify-center rounded-full border-2 border-white dark:border-flora-900 bg-dust-100 dark:bg-flora-900 text-soil-700/50 dark:text-dust-200/50 text-xs"
-                              >
-                                🏺
+                      {/* Item Thumbnails and Names Summary */}
+                      <div className="flex flex-wrap items-center gap-4 py-4">
+                        {groupedProducts.length > 0 && (
+                          <div className="flex -space-x-3 rtl:space-x-reverse shrink-0">
+                            {groupedProducts.slice(0, 3).map((grp, idx) =>
+                              grp.imageUrl ? (
+                                <img
+                                  key={grp.productId || idx}
+                                  src={grp.imageUrl}
+                                  alt={grp.name}
+                                  className="relative z-10 w-12 h-12 rounded-full border-2 border-white dark:border-flora-900 object-cover"
+                                />
+                              ) : (
+                                <div
+                                  key={grp.productId || idx}
+                                  className="relative z-10 flex w-12 h-12 items-center justify-center rounded-full border-2 border-white dark:border-flora-900 bg-dust-100 dark:bg-flora-900 text-soil-700/50 dark:text-dust-200/50 text-xs"
+                                >
+                                  🏺
+                                </div>
+                              )
+                            )}
+                            {groupedProducts.length > 3 && (
+                              <div className="relative z-10 flex w-12 h-12 items-center justify-center rounded-full border-2 border-white dark:border-flora-900 bg-dust-200 dark:bg-flora-900 text-xs font-bold text-soil-800 dark:text-dust-100">
+                                +{toFa(groupedProducts.length - 3)}
                               </div>
-                            )
-                          )}
-                          {order._count.items > 3 && (
-                            <div className="relative z-10 flex w-12 h-12 items-center justify-center rounded-full border-2 border-white dark:border-flora-900 bg-dust-200 dark:bg-flora-900 text-xs font-bold text-soil-800 dark:text-dust-100">
-                              +{toFa(order._count.items - 3)}
-                            </div>
-                          )}
-                        </div>
-                      )}
+                            )}
+                          </div>
+                        )}
 
-                      {order.items.length > 0 && (
-                        <div className="text-xs text-soil-800 dark:text-dust-100">
-                          <span className="font-bold">{order.items[0]?.productName}</span>
-                          {order._count.items > 1 && (
-                            <span className="text-soil-700/70 dark:text-dust-200/70">
-                              {' '}و {toFa(order._count.items - 1)} محصول دیگر
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                        {firstProduct && (
+                          <div className="text-xs text-soil-800 dark:text-dust-100">
+                            <span className="font-bold">{firstProduct.name}</span>
+                            {firstProduct.breakdownSummary && (
+                              <span className="text-soil-700/70 dark:text-dust-200/70">
+                                {' '}({firstProduct.breakdownSummary})
+                              </span>
+                            )}
+                            {otherProductsCount > 0 && (
+                              <span className="text-soil-700/70 dark:text-dust-200/70">
+                                {' '}و {toFa(otherProductsCount)} محصول دیگر
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
                     {/* Metadata and Actions */}
                     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-soil-900/5 dark:border-dust-50/5 pt-4 text-xs text-soil-700/80 dark:text-dust-200/80">
@@ -332,7 +348,8 @@ export default async function AdminUserDetailPage({ params }: Props) {
                     </div>
                   </Link>
                 </li>
-              ))}
+              );
+            })}
             </ul>
           </div>
         )}

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
-import ProductCatalogView, { type SortKey } from '@/features/catalog/components/ProductCatalogView';
+import { ProductCatalogView, type SortKey } from '@/features/catalog';
 
 const PAGE_SIZE = 12;
 

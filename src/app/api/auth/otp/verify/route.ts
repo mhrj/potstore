@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { toEn } from '@/lib/format';
 import { createSessionCookie } from '@/lib/auth';
@@ -6,11 +7,26 @@ import { hashOtpCode, OTP_MAX_ATTEMPTS } from '@/lib/verification';
 
 export const runtime = 'nodejs';
 
+const otpVerifySchema = z
+  .object({
+    phone: z.string({ required_error: 'شماره موبایل الزامی است' }).trim().min(1, 'شماره موبایل الزامی است').max(30),
+    code: z.string({ required_error: 'کد تایید الزامی است' }).trim().min(1, 'کد تایید الزامی است').max(10),
+  })
+  .strict();
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const rawPhone = typeof body?.phone === 'string' ? body.phone.trim() : '';
-    const rawCode = typeof body?.code === 'string' ? body.code.trim() : '';
+    const rawBody = await req.json().catch(() => null);
+    const parsed = otpVerifySchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { message: parsed.error.issues[0]?.message ?? 'اطلاعات ارسالی نامعتبر است.' },
+        { status: 400 },
+      );
+    }
+
+    const rawPhone = parsed.data.phone;
+    const rawCode = parsed.data.code;
 
     const normalizedPhone = toEn(rawPhone).replace(/\s+/g, '');
     const normalizedCode = toEn(rawCode).replace(/\s+/g, '');

@@ -4,7 +4,7 @@ import Container from '@/components/ui/Container';
 import StatusBadge from '@/features/checkout/components/StatusBadge';
 import AddressBook from '@/features/checkout/components/AddressBook';
 import ReorderButton from '@/features/checkout/components/ReorderButton';
-import LogoutButton from '@/features/auth/components/LogoutButton';
+import { LogoutButton } from '@/features/auth';
 import { formatCarrierName } from '@/lib/orders';
 import ShippingScheduleNotice from '@/features/checkout/components/ShippingScheduleNotice';
 import { groupOrderItemsByProduct, type OrderItemDetailsItem } from '@/features/checkout/components/OrderItemDetails';

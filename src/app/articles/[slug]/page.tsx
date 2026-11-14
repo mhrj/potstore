@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
-import ArticleDetailView from '@/features/articles/components/ArticleDetailView';
+import { ArticleDetailView } from '@/features/articles';
 
 export const dynamic = 'force-dynamic';
 

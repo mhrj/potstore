@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
 import { formatToman, formatDateFa, toFa } from '@/lib/format';
-import OrderStatusBadge from '@/features/admin/components/OrderStatusBadge';
-import StatusBadge from '@/features/checkout/components/StatusBadge';
+import { OrderStatusBadge } from '@/features/admin';
+import { StatusBadge } from '@/features/checkout';
 
 const FILTERS = [
   { key: 'all', label: 'همه' },

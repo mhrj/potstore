@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
 import { DEFAULT_CONTENT } from '@/lib/content';
-import ContentBlockEditor from '@/features/admin/components/ContentBlockEditor';
+import { ContentBlockEditor } from '@/features/admin';
 
 export const dynamic = 'force-dynamic';
 

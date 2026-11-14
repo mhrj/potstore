@@ -5,7 +5,7 @@ import StatusBadge from '@/features/checkout/components/StatusBadge';
 import { allowedTransitions, ORDER_STATUS_LABELS, isOrderStatus, TIMELINE, formatCarrierName, getNextShippingDate } from '@/lib/orders';
 import { channelLabel } from '@/lib/analytics';
 import CancelOrderButton from '@/features/checkout/components/CancelOrderButton';
-import ItemColorBadge from '@/features/catalog/components/ItemColorBadge';
+import { ItemColorBadge } from '@/features/catalog';
 import PrintInvoiceButton from '@/features/checkout/components/PrintInvoiceButton';
 import BundleDetailsAccordion from '@/features/checkout/components/BundleDetailsAccordion';
 import ShippingScheduleNotice from '@/features/checkout/components/ShippingScheduleNotice';
@@ -87,7 +87,7 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
 
   return (
     <Container className="py-12 print:max-w-full print:p-0 print:m-0 print:py-0">
-      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden no-print">
         <nav className="text-xs text-soil-700/60 dark:text-dust-200/60">
           <Link href="/dashboard" className="hover:text-flora-700 dark:hover:text-flora-300">
             حساب من
@@ -117,13 +117,13 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
       </header>
 
       {isCanceled ? (
-        <p className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-sm font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 print:hidden">
+        <p className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-6 py-5 text-sm font-bold text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 print:hidden no-print">
           این سفارش لغو شده است.
         </p>
       ) : (
-        <div className="mt-8 print:hidden">
+        <div className="mt-8 print:hidden no-print">
           {status === 'PENDING' && (
-            <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-200 print:hidden">
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-bold text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/40 dark:text-amber-200 print:hidden no-print">
               <span className="size-2 rounded-full bg-amber-500 animate-pulse" />
               در انتظار پرداخت — پس از نهایی‌سازی پرداخت، سفارش شما وارد فرآیند آماده‌سازی می‌شود.
             </div>
@@ -160,7 +160,7 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
               );
             })}
           </ol>
-          <div className="mt-4 print:hidden">
+          <div className="mt-4 print:hidden no-print">
             <ShippingScheduleNotice compact={true} />
           </div>
         </div>
@@ -291,7 +291,7 @@ export default function OrderDetailView({ order }: { order: OrderDetail }) {
             </dl>
           </section>
 
-          <div className="flex flex-wrap gap-3 print:hidden">
+          <div className="flex flex-wrap gap-3 print:hidden no-print">
             <form action="/api/cart/reorder" method="post">
               <input type="hidden" name="orderId" value={order.id} />
               <button className="rounded-full bg-flora-900 px-5 py-2.5 text-xs font-black text-white hover:bg-flora-700 dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 transition-colors cursor-pointer">

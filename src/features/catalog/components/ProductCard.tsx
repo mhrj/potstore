@@ -72,7 +72,7 @@ export default function ProductCard({ product, className = '' }: Props) {
       />
 
       {/* Product Image Wrapper */}
-      <div className="relative aspect-square rounded-xl overflow-hidden border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950">
+      <div className="relative aspect-square w-full rounded-xl overflow-hidden border border-soil-900/5 dark:border-dust-50/10 bg-white dark:bg-flora-950">
         {product.images?.[0]?.url && product.images[0].url.trim().length > 0 ? (
           <Image
             src={product.images[0].url}
@@ -98,7 +98,7 @@ export default function ProductCard({ product, className = '' }: Props) {
         )}
 
         {/* Dynamic Badges (Start Corner / Right in RTL) */}
-        <div className="absolute top-2 inset-s-2 md:top-3 md:inset-s-3 flex flex-col gap-1 z-10">
+        <div className="absolute top-2 start-2 md:top-3 md:start-3 flex flex-col gap-1 z-10">
           {isBundle && (
             <span className="rounded-lg md:rounded-xl bg-flora-900 dark:bg-flora-700 text-white px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-black shadow-xs">
               ست {toFa(bundleSize)} عددی
@@ -111,8 +111,8 @@ export default function ProductCard({ product, className = '' }: Props) {
           )}
         </div>
 
-        {/* Top-left Badges (Left Corner) */}
-        <div className="absolute top-2 left-2 md:top-3 md:left-3 flex flex-col gap-1 z-10 items-start">
+        {/* Dynamic Badges (End Corner / Left in RTL) */}
+        <div className="absolute top-2 end-2 md:top-3 md:end-3 flex flex-col gap-1 z-10 items-start">
           {hasSale && (
             <span className="rounded-lg md:rounded-xl bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 px-2 py-0.5 md:px-2.5 md:py-1 text-[10px] md:text-xs font-black shadow-xs">
               تخفیف ویژه

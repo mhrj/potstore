@@ -136,7 +136,7 @@ type OrganicTextRevealProps = {
 
 export default function OrganicTextReveal({
   text,
-  className = 'mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words max-w-full text-soil-900 dark:text-dust-50 text-center lg:text-right',
+  className = 'mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words max-w-full text-soil-900 dark:text-dust-50 text-center lg:text-start',
   as: Component = 'h1',
   highlightWord = 'جان',
   typingDuration: propTypingDuration,

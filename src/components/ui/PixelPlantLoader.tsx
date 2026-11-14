@@ -77,7 +77,7 @@ export default function PixelPlantLoader({
         </g>
       </svg>
       {label && (
-        <p className="mt-3 text-xs md:text-sm font-medium text-soil-700/75 tracking-wide animate-pulse">
+        <p className="mt-3 text-xs md:text-sm font-medium text-soil-700/75 animate-pulse">
           {label}
         </p>
       )}

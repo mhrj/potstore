@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { addToCart } from '@/lib/cart';
 
 export const runtime = 'nodejs';
+
+const reorderSchema = z.object({
+  orderId: z.string().min(1).max(64),
+}).strict();
 
 /**
  * Re-add every item from a past order into the user's cart.
@@ -17,10 +22,11 @@ export async function POST(req: Request) {
   }
 
   const form = await req.formData();
-  const orderId = String(form.get('orderId') ?? '');
-  if (!orderId) {
+  const parsed = reorderSchema.safeParse({ orderId: form.get('orderId') });
+  if (!parsed.success) {
     return NextResponse.redirect(new URL('/dashboard', req.url), { status: 303 });
   }
+  const { orderId } = parsed.data;
 
   const order = await prisma.order.findFirst({
     where: { id: orderId, userId: session.sub },

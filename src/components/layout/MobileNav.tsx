@@ -75,7 +75,7 @@ export default function MobileNav({
         <nav
           id="mobile-nav"
           aria-label="منوی موبایل"
-          className="absolute inset-x-0 top-full border-b border-soil-900/10 bg-dust-50 px-4 py-3 shadow-[0_16px_32px_-20px_rgba(62,39,35,0.4)] dark:border-dust-100/10 dark:bg-flora-950 dark:shadow-[0_16px_32px_-20px_rgba(0,0,0,0.8)]"
+          className="absolute inset-x-0 top-full max-h-[calc(100dvh-4.5rem)] overflow-y-auto border-b border-soil-900/10 bg-dust-50 px-4 py-3 shadow-[0_16px_32px_-20px_rgba(62,39,35,0.4)] dark:border-dust-100/10 dark:bg-flora-950 dark:shadow-[0_16px_32px_-20px_rgba(0,0,0,0.8)]"
         >
           <ul className="flex flex-col">
             {items.map((link) => (

@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { getActiveAdmin } from '@/lib/auth';
 
 type Params = { params: Promise<{ id: string }> };
+
+const userPatchSchema = z
+  .object({
+    role: z.enum(['ADMIN', 'CUSTOMER']).optional(),
+    isActive: z.boolean().optional(),
+  })
+  .strict();
 
 export async function PATCH(request: Request, { params }: Params) {
   const admin = await getActiveAdmin();
@@ -13,8 +21,15 @@ export async function PATCH(request: Request, { params }: Params) {
   const { id } = await params;
 
   try {
-    const body = await request.json();
-    const { role, isActive } = body;
+    const rawBody = await request.json().catch(() => null);
+    const parsed = userPatchSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? 'اطلاعات ارسالی نامعتبر است.' },
+        { status: 400 },
+      );
+    }
+    const { role, isActive } = parsed.data;
 
     // Prevent modifying self
     if (id === admin.sub) {
@@ -27,16 +42,10 @@ export async function PATCH(request: Request, { params }: Params) {
     const data: { role?: 'ADMIN' | 'CUSTOMER'; isActive?: boolean } = {};
 
     if (role !== undefined) {
-      if (role !== 'ADMIN' && role !== 'CUSTOMER') {
-        return NextResponse.json({ error: 'نقش کاربری نامعتبر است.' }, { status: 400 });
-      }
       data.role = role;
     }
 
     if (isActive !== undefined) {
-      if (typeof isActive !== 'boolean') {
-        return NextResponse.json({ error: 'وضعیت فعال‌سازی نامعتبر است.' }, { status: 400 });
-      }
       data.isActive = isActive;
     }
 

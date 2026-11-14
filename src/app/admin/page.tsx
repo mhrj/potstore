@@ -7,10 +7,8 @@ import {
   summarizeFulfillment,
   type ReportingOrder,
 } from '@/lib/analytics';
-import StatusBadge from '@/features/checkout/components/StatusBadge';
-import LandingImageManager from '@/features/admin/components/LandingImageManager';
-import SalesChart from '@/features/admin/components/SalesChart';
-import VisitsChart from '@/features/admin/components/VisitsChart';
+import { StatusBadge } from '@/features/checkout';
+import { LandingImageManager, SalesChart, VisitsChart } from '@/features/admin';
 
 export const revalidate = 300;
 

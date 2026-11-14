@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
-import StoreSettingsForm from '@/features/admin/components/StoreSettingsForm';
+import { StoreSettingsForm } from '@/features/admin';
 
 export const dynamic = 'force-dynamic';
 

@@ -3,7 +3,7 @@ import { toFa } from '@/lib/format';
 import Container from '@/components/ui/Container';
 import ProductCard from '@/features/catalog/components/ProductCard';
 import TagFilterSelect from '@/features/catalog/components/TagFilterSelect';
-import BotanicalCanvas from '@/features/landing/components/BotanicalCanvas';
+import { BotanicalCanvas } from '@/features/landing';
 
 export const SORTS = {
   newest: { label: 'جدیدترین' },

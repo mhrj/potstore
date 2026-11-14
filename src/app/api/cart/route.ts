@@ -11,15 +11,17 @@ const colorOptionSchema = z.object({
   priceAdjustment: z.coerce.number().int().default(0),
 });
 
-const addSchema = z.object({
-  productId: z.string().cuid(),
-  variantId: z.string().cuid().optional().nullable(),
-  quantity: z.coerce.number().int().min(1).max(5000),
-  color: z.union([z.string(), colorOptionSchema]).optional().nullable(),
-  selectedColor: colorOptionSchema.optional().nullable(),
-  bundleColors: z.record(z.string(), z.unknown()).optional().nullable(),
-  colorAdjustment: z.coerce.number().int().optional(),
-});
+const addSchema = z
+  .object({
+    productId: z.string().cuid(),
+    variantId: z.string().cuid().optional().nullable(),
+    quantity: z.coerce.number().int().min(1).max(5000),
+    color: z.union([z.string(), colorOptionSchema]).optional().nullable(),
+    selectedColor: colorOptionSchema.optional().nullable(),
+    bundleColors: z.record(z.string(), z.unknown()).optional().nullable(),
+    colorAdjustment: z.coerce.number().int().optional(),
+  })
+  .strict();
 
 export async function GET() {
   const session = await getSession();

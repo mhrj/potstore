@@ -72,7 +72,7 @@ function renderPasswordResetEmail(resetUrl: string) {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #ede8e3; box-shadow: 0 4px 16px rgba(0,0,0,0.04); overflow: hidden;">
     <tr>
       <td style="padding: 32px 28px; background: linear-gradient(135deg, #1b4332 0%, #2d6a4f 100%); text-align: center;">
-        <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold; letter-spacing: -0.5px;">پات استور</h1>
+        <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">پات استور</h1>
         <p style="margin: 8px 0 0 0; color: #d8f3dc; font-size: 14px;">فروشگاه تخصصی گلدان و سفال</p>
       </td>
     </tr>

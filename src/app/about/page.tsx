@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getContentMap } from '@/lib/content';
-import AboutPageView from '@/features/landing/components/AboutPageView';
+import { AboutPageView } from '@/features/landing';
 
 export const revalidate = 300;
 

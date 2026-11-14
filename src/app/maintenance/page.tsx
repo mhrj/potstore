@@ -16,7 +16,7 @@ export default function MaintenancePage() {
             🌱
           </div>
 
-          <h1 className="text-2xl md:text-3xl font-black text-soil-900 dark:text-dust-50 tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-black text-soil-900 dark:text-dust-50">
             در حال به‌روزرسانی
           </h1>
 

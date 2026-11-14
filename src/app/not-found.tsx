@@ -3,7 +3,7 @@ import Container from '@/components/ui/Container';
 
 export default function NotFound() {
   return (
-    <Container className="flex min-h-[60vh] flex-col items-center justify-center py-20 text-center">
+    <Container className="flex min-h-[60dvh] flex-col items-center justify-center py-20 text-center">
       <p className="font-mono text-5xl font-black text-flora-700 dark:text-flora-300">۴۰۴</p>
       <h1 className="mt-5 text-2xl font-black text-soil-900 dark:text-dust-50">این صفحه پیدا نشد</h1>
       <p className="mt-3 max-w-md text-sm leading-7 text-soil-700/75 dark:text-dust-200/75">

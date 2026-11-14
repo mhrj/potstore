@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
-import ArticlesListView from '@/features/articles/components/ArticlesListView';
+import { ArticlesListView } from '@/features/articles';
 
 export const revalidate = 3600;
 

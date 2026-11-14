@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import DashboardView from "@/features/checkout/components/DashboardView";
+import { DashboardView } from "@/features/checkout";
 
 export default async function DashboardPage() {
   const user = await requireUser();

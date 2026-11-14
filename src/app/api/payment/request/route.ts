@@ -12,10 +12,12 @@ import { zarinpalRequest, ZARINPAL_ERRORS } from '@/lib/zarinpal';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const schema = z.object({
-  addressId: z.string().cuid(),
-  shippingCarrier: z.string().trim().max(50).optional(),
-});
+const schema = z
+  .object({
+    addressId: z.string().cuid(),
+    shippingCarrier: z.string().trim().max(50).optional(),
+  })
+  .strict();
 
 function generateOrderNumber() {
   const now = new Date();

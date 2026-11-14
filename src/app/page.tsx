@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import { toFa } from '@/lib/format';
 import { getContentMap } from '@/lib/content';
-import LandingPageView from '@/features/landing/components/LandingPageView';
+import { LandingPageView } from '@/features/landing';
 
 export const dynamic = 'force-dynamic';
 

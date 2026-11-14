@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { formatToman, toFa } from '@/lib/format';
-import ItemColorBadge, { resolveColorName } from '@/features/catalog/components/ItemColorBadge';
+import { ItemColorBadge, resolveColorName } from '@/features/catalog';
 import BundleDetailsAccordion from './BundleDetailsAccordion';
 import { parseBundleItems } from '@/lib/product-features';
 
@@ -525,7 +525,230 @@ export function groupOrderItemsByProduct(items: OrderItemDetailsItem[]): Grouped
   return groups;
 }
 
-export const groupOrderItems = groupOrderItemsByProduct;
+export function groupOrderItems(items: OrderItemDetailsItem[]): GroupedOrderProduct[] {
+  return groupOrderItemsByProduct(items);
+}
+
+export function OrderItemGroup({
+  group,
+  compact = false,
+  className = '',
+  linkTargetBlank = false,
+  showAccordion = true,
+}: {
+  group: GroupedOrderProduct;
+  compact?: boolean;
+  className?: string;
+  linkTargetBlank?: boolean;
+  showAccordion?: boolean;
+}) {
+  if (compact) {
+    return (
+      <div className={`py-3 text-xs space-y-2 ${className}`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-bold text-soil-900 dark:text-dust-50 text-xs sm:text-sm">
+                {group.name}
+              </span>
+              {group.breakdownSummary && (
+                <span className="text-[11px] text-soil-700/75 dark:text-dust-200/75 font-medium">
+                  ({group.breakdownSummary})
+                </span>
+              )}
+              {group.isBundle && (
+                <span className="rounded-md bg-flora-100 dark:bg-flora-950 px-1.5 py-0.5 text-[10px] font-bold text-flora-700 dark:text-flora-300 border border-flora-300 dark:border-flora-700">
+                  ست {toFa(group.bundleSize || 1)} عددی
+                </span>
+              )}
+            </div>
+
+            {group.specs && (
+              <p className="text-[11px] text-soil-700/70 dark:text-dust-200/70">
+                {group.specs}
+              </p>
+            )}
+
+            {/* Sub-rows for variants */}
+            <ul className="space-y-1.5 mt-1 ps-2 border-s-2 border-flora-500/30 dark:border-flora-400/20">
+              {group.items.map((subItem, idx) => {
+                const colorName = extractColorName(subItem);
+                const bundleSize = subItem.bundleSize && subItem.bundleSize > 1 ? subItem.bundleSize : 1;
+                const isBundle = subItem.isBundle ?? bundleSize > 1;
+                const displayQty = isBundle ? Math.round(subItem.quantity / bundleSize) : subItem.quantity;
+                const unitLabel = isBundle ? 'بسته' : 'عدد';
+
+                const labelParts: string[] = [];
+                if (colorName) labelParts.push(`رنگ ${colorName}`);
+                if (subItem.variantTitle) labelParts.push(subItem.variantTitle);
+                const variantLabel = labelParts.length > 0 ? labelParts.join(' - ') : 'مدل استاندارد';
+
+                return (
+                  <li key={subItem.id ?? idx} className="flex items-center justify-between text-[11px] gap-2">
+                    <span className="flex items-center gap-1.5 text-soil-800 dark:text-dust-200">
+                      <ItemColorBadge colorData={subItem.colorData ?? (subItem.selectedColorHex ? { selectedColorHex: subItem.selectedColorHex } : undefined)} />
+                      <span>{variantLabel}:</span>
+                      <span className="font-bold">{toFa(displayQty)} {unitLabel}</span>
+                    </span>
+                    <span className="font-semibold text-soil-900 dark:text-dust-100">
+                      ({formatToman(subItem.lineTotalToman)} تومان)
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Group total */}
+            <div className="pt-1.5 text-[11px] flex justify-between font-bold text-soil-900 dark:text-dust-50 border-t border-soil-900/5 dark:border-dust-50/10">
+              <span>مجموع:</span>
+              <span className="text-flora-900 dark:text-flora-300 font-black">
+                {formatToman(group.totalToman)} تومان
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`flex flex-col gap-4 py-4 sm:flex-row sm:items-start sm:justify-between print:flex-row print:items-start print:justify-between print:py-2 print:gap-3 print:break-inside-avoid ${className}`}
+    >
+      <div className="flex items-start gap-4 print:gap-2 flex-1 min-w-0">
+        {/* Product image shown once */}
+        {group.imageUrl ? (
+          <img
+            src={group.imageUrl}
+            alt={group.name}
+            className="w-20 h-20 rounded-xl object-cover shrink-0 border border-soil-900/10 dark:border-dust-50/10 shadow-2xs dark:shadow-none print:w-12 print:h-12 print:rounded-md"
+          />
+        ) : (
+          <div className="w-20 h-20 rounded-xl bg-dust-100 dark:bg-flora-950 border border-soil-900/10 dark:border-dust-50/10 flex items-center justify-center text-soil-700/40 dark:text-dust-400 shrink-0 print:w-12 print:h-12 print:rounded-md">
+            <svg className="w-7 h-7 print:w-5 print:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+              />
+            </svg>
+          </div>
+        )}
+
+        <div className="space-y-2 flex-1 min-w-0 print:space-y-1 print:text-[10px]">
+          <div className="flex items-center gap-2 flex-wrap">
+            {group.slug ? (
+              <Link
+                href={`/products/${group.slug}`}
+                target={linkTargetBlank ? '_blank' : undefined}
+                rel={linkTargetBlank ? 'noopener noreferrer' : undefined}
+                className="font-bold text-soil-900 dark:text-dust-50 hover:text-flora-700 dark:hover:text-flora-300 transition text-base print:text-xs"
+              >
+                {group.name}
+              </Link>
+            ) : (
+              <span className="font-bold text-soil-900 dark:text-dust-50 text-base print:text-xs">
+                {group.name}
+              </span>
+            )}
+
+            {group.breakdownSummary && (
+              <span className="text-xs text-soil-700/80 dark:text-dust-200/80 font-medium print:text-[10px]">
+                ({group.breakdownSummary})
+              </span>
+            )}
+
+            {group.isBundle && (
+              <span className="inline-flex items-center rounded-md bg-flora-100 dark:bg-flora-950 px-2 py-0.5 text-[11px] font-bold text-flora-700 dark:text-flora-300 border border-flora-300 dark:border-flora-700 print:text-[9px]">
+                شامل {toFa(group.bundleSize || 1)} عدد گلدان
+              </span>
+            )}
+          </div>
+
+          {group.sku && (
+            <p className="text-xs text-soil-700/60 dark:text-dust-200/60 print:text-[9px]">
+              کد کالا:{' '}
+              <span className="font-mono font-medium" dir="ltr">
+                {group.sku}
+              </span>
+            </p>
+          )}
+
+          {group.specs && (
+            <p className="text-xs text-soil-700/75 dark:text-dust-200/75 print:text-[9px]">
+              {group.specs}
+            </p>
+          )}
+
+          {/* Sub-rows for each variant */}
+          <div className="rounded-xl bg-dust-50/80 dark:bg-flora-950/40 border border-soil-900/5 dark:border-dust-50/5 p-3 space-y-2 print:p-1 print:bg-transparent print:border-none print:space-y-1">
+            {group.items.map((subItem, idx) => {
+              const colorName = extractColorName(subItem);
+              const bundleSize = subItem.bundleSize && subItem.bundleSize > 1 ? subItem.bundleSize : 1;
+              const isBundle = subItem.isBundle ?? bundleSize > 1;
+              const displayQty = isBundle ? Math.round(subItem.quantity / bundleSize) : subItem.quantity;
+              const unitLabel = isBundle ? 'بسته' : 'عدد';
+
+              const labelParts: string[] = [];
+              if (colorName) labelParts.push(`رنگ ${colorName}`);
+              if (subItem.variantTitle) labelParts.push(subItem.variantTitle);
+              const variantLabel = labelParts.length > 0 ? labelParts.join(' - ') : 'مدل استاندارد';
+
+              const bundleItems = isBundle ? extractBundleItemsList(subItem) : [];
+              const bundleBreakdown = isBundle ? formatBundleBreakdown(bundleItems) : null;
+
+              return (
+                <div key={subItem.id ?? idx} className="space-y-1 text-xs print:text-[9px]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="size-1.5 rounded-full bg-flora-600 dark:bg-flora-400 shrink-0" />
+                      <span className="font-bold text-soil-900 dark:text-dust-50">
+                        {variantLabel}:
+                      </span>
+                      <span className="font-medium text-soil-700 dark:text-dust-200">
+                        {toFa(displayQty)} {unitLabel}
+                      </span>
+                      <ItemColorBadge colorData={subItem.colorData ?? (subItem.selectedColorHex ? { selectedColorHex: subItem.selectedColorHex } : undefined)} />
+                    </div>
+                    <span className="font-bold text-soil-900 dark:text-dust-50">
+                      ({formatToman(subItem.lineTotalToman)} تومان)
+                    </span>
+                  </div>
+
+                  {bundleBreakdown && (
+                    <p className="text-[11px] text-flora-800 dark:text-flora-300 font-medium bg-flora-50/80 dark:bg-flora-900/40 px-2 py-0.5 rounded-md border border-flora-200/60 dark:border-flora-800/40 print:bg-transparent print:border-none print:p-0">
+                      {bundleBreakdown}
+                    </p>
+                  )}
+
+                  {isBundle && showAccordion && (
+                    <BundleDetailsAccordion
+                      bundleSize={bundleSize}
+                      bundleCount={displayQty}
+                      colorData={subItem.colorData}
+                      productBundleItems={subItem.product?.bundleItems}
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Group Total row */}
+          <div className="flex items-center justify-between pt-1 text-xs print:text-[10px]">
+            <span className="font-bold text-soil-700/80 dark:text-dust-200/80">
+              مجموع:
+            </span>
+            <span className="font-black text-sm text-flora-900 dark:text-flora-300 print:text-xs">
+              {formatToman(group.totalToman)} تومان
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export function GroupedOrderItems({
   items,
@@ -544,223 +767,17 @@ export function GroupedOrderItems({
 
   if (groups.length === 0) return null;
 
-  if (compact) {
-    return (
-      <div className={`divide-y divide-soil-900/10 dark:divide-dust-50/10 ${className}`}>
-        {groups.map((group) => {
-          return (
-            <div key={group.productId} className="py-3 text-xs space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-bold text-soil-900 dark:text-dust-50 text-xs sm:text-sm">
-                      {group.name}
-                    </span>
-                    {group.breakdownSummary && (
-                      <span className="text-[11px] text-soil-700/75 dark:text-dust-200/75 font-medium">
-                        ({group.breakdownSummary})
-                      </span>
-                    )}
-                    {group.isBundle && (
-                      <span className="rounded-md bg-flora-100 dark:bg-flora-950 px-1.5 py-0.5 text-[10px] font-bold text-flora-700 dark:text-flora-300 border border-flora-300 dark:border-flora-700">
-                        ست {toFa(group.bundleSize || 1)} عددی
-                      </span>
-                    )}
-                  </div>
-
-                  {group.specs && (
-                    <p className="text-[11px] text-soil-700/70 dark:text-dust-200/70">
-                      {group.specs}
-                    </p>
-                  )}
-
-                  {/* Sub-rows for variants */}
-                  <ul className="space-y-1.5 mt-1 pr-2 border-r-2 border-flora-500/30 dark:border-flora-400/20">
-                    {group.items.map((subItem, idx) => {
-                      const colorName = extractColorName(subItem);
-                      const bundleSize = subItem.bundleSize && subItem.bundleSize > 1 ? subItem.bundleSize : 1;
-                      const isBundle = subItem.isBundle ?? bundleSize > 1;
-                      const displayQty = isBundle ? Math.round(subItem.quantity / bundleSize) : subItem.quantity;
-                      const unitLabel = isBundle ? 'بسته' : 'عدد';
-
-                      const labelParts: string[] = [];
-                      if (colorName) labelParts.push(`رنگ ${colorName}`);
-                      if (subItem.variantTitle) labelParts.push(subItem.variantTitle);
-                      const variantLabel = labelParts.length > 0 ? labelParts.join(' - ') : 'مدل استاندارد';
-
-                      return (
-                        <li key={subItem.id ?? idx} className="flex items-center justify-between text-[11px] gap-2">
-                          <span className="flex items-center gap-1.5 text-soil-800 dark:text-dust-200">
-                            <ItemColorBadge colorData={subItem.colorData ?? (subItem.selectedColorHex ? { selectedColorHex: subItem.selectedColorHex } : undefined)} />
-                            <span>{variantLabel}:</span>
-                            <span className="font-bold">{toFa(displayQty)} {unitLabel}</span>
-                          </span>
-                          <span className="font-semibold text-soil-900 dark:text-dust-100">
-                            ({formatToman(subItem.lineTotalToman)} تومان)
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-
-                  {/* Group total */}
-                  <div className="pt-1.5 text-[11px] flex justify-between font-bold text-soil-900 dark:text-dust-50 border-t border-soil-900/5 dark:border-dust-50/10">
-                    <span>مجموع:</span>
-                    <span className="text-flora-900 dark:text-flora-300 font-black">
-                      {formatToman(group.totalToman)} تومان
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
   return (
     <div className={`divide-y divide-soil-900/10 dark:divide-dust-50/10 ${className}`}>
-      {groups.map((group) => {
-        return (
-          <div
-            key={group.productId}
-            className="flex flex-col gap-4 py-4 sm:flex-row sm:items-start sm:justify-between print:flex-row print:items-start print:justify-between print:py-2 print:gap-3 print:break-inside-avoid"
-          >
-            <div className="flex items-start gap-4 print:gap-2 flex-1 min-w-0">
-              {/* Product image shown once */}
-              {group.imageUrl ? (
-                <img
-                  src={group.imageUrl}
-                  alt={group.name}
-                  className="w-20 h-20 rounded-xl object-cover shrink-0 border border-soil-900/10 dark:border-dust-50/10 shadow-2xs dark:shadow-none print:w-12 print:h-12 print:rounded-md"
-                />
-              ) : (
-                <div className="w-20 h-20 rounded-xl bg-dust-100 dark:bg-flora-950 border border-soil-900/10 dark:border-dust-50/10 flex items-center justify-center text-soil-700/40 dark:text-dust-400 shrink-0 print:w-12 print:h-12 print:rounded-md">
-                  <svg className="w-7 h-7 print:w-5 print:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1.5}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-              )}
-
-              <div className="space-y-2 flex-1 min-w-0 print:space-y-1 print:text-[10px]">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {group.slug ? (
-                    <Link
-                      href={`/products/${group.slug}`}
-                      target={linkTargetBlank ? '_blank' : undefined}
-                      rel={linkTargetBlank ? 'noopener noreferrer' : undefined}
-                      className="font-bold text-soil-900 dark:text-dust-50 hover:text-flora-700 dark:hover:text-flora-300 transition text-base print:text-xs"
-                    >
-                      {group.name}
-                    </Link>
-                  ) : (
-                    <span className="font-bold text-soil-900 dark:text-dust-50 text-base print:text-xs">
-                      {group.name}
-                    </span>
-                  )}
-
-                  {group.breakdownSummary && (
-                    <span className="text-xs text-soil-700/80 dark:text-dust-200/80 font-medium print:text-[10px]">
-                      ({group.breakdownSummary})
-                    </span>
-                  )}
-
-                  {group.isBundle && (
-                    <span className="inline-flex items-center rounded-md bg-flora-100 dark:bg-flora-950 px-2 py-0.5 text-[11px] font-bold text-flora-700 dark:text-flora-300 border border-flora-300 dark:border-flora-700 print:text-[9px]">
-                      شامل {toFa(group.bundleSize || 1)} عدد گلدان
-                    </span>
-                  )}
-                </div>
-
-                {group.sku && (
-                  <p className="text-xs text-soil-700/60 dark:text-dust-200/60 print:text-[9px]">
-                    کد کالا:{' '}
-                    <span className="font-mono font-medium" dir="ltr">
-                      {group.sku}
-                    </span>
-                  </p>
-                )}
-
-                {group.specs && (
-                  <p className="text-xs text-soil-700/75 dark:text-dust-200/75 print:text-[9px]">
-                    {group.specs}
-                  </p>
-                )}
-
-                {/* Sub-rows for each variant */}
-                <div className="rounded-xl bg-dust-50/80 dark:bg-flora-950/40 border border-soil-900/5 dark:border-dust-50/5 p-3 space-y-2 print:p-1 print:bg-transparent print:border-none print:space-y-1">
-                  {group.items.map((subItem, idx) => {
-                    const colorName = extractColorName(subItem);
-                    const bundleSize = subItem.bundleSize && subItem.bundleSize > 1 ? subItem.bundleSize : 1;
-                    const isBundle = subItem.isBundle ?? bundleSize > 1;
-                    const displayQty = isBundle ? Math.round(subItem.quantity / bundleSize) : subItem.quantity;
-                    const unitLabel = isBundle ? 'بسته' : 'عدد';
-
-                    const labelParts: string[] = [];
-                    if (colorName) labelParts.push(`رنگ ${colorName}`);
-                    if (subItem.variantTitle) labelParts.push(subItem.variantTitle);
-                    const variantLabel = labelParts.length > 0 ? labelParts.join(' - ') : 'مدل استاندارد';
-
-                    const bundleItems = isBundle ? extractBundleItemsList(subItem) : [];
-                    const bundleBreakdown = isBundle ? formatBundleBreakdown(bundleItems) : null;
-
-                    return (
-                      <div key={subItem.id ?? idx} className="space-y-1 text-xs print:text-[9px]">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="size-1.5 rounded-full bg-flora-600 dark:bg-flora-400 shrink-0" />
-                            <span className="font-bold text-soil-900 dark:text-dust-50">
-                              {variantLabel}:
-                            </span>
-                            <span className="font-medium text-soil-700 dark:text-dust-200">
-                              {toFa(displayQty)} {unitLabel}
-                            </span>
-                            <ItemColorBadge colorData={subItem.colorData ?? (subItem.selectedColorHex ? { selectedColorHex: subItem.selectedColorHex } : undefined)} />
-                          </div>
-                          <span className="font-bold text-soil-900 dark:text-dust-50">
-                            ({formatToman(subItem.lineTotalToman)} تومان)
-                          </span>
-                        </div>
-
-                        {bundleBreakdown && (
-                          <p className="text-[11px] text-flora-800 dark:text-flora-300 font-medium bg-flora-50/80 dark:bg-flora-900/40 px-2 py-0.5 rounded-md border border-flora-200/60 dark:border-flora-800/40 print:bg-transparent print:border-none print:p-0">
-                            {bundleBreakdown}
-                          </p>
-                        )}
-
-                        {isBundle && showAccordion && (
-                          <BundleDetailsAccordion
-                            bundleSize={bundleSize}
-                            bundleCount={displayQty}
-                            colorData={subItem.colorData}
-                            productBundleItems={subItem.product?.bundleItems}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Group Total row */}
-                <div className="flex items-center justify-between pt-1 text-xs print:text-[10px]">
-                  <span className="font-bold text-soil-700/80 dark:text-dust-200/80">
-                    مجموع:
-                  </span>
-                  <span className="font-black text-sm text-flora-900 dark:text-flora-300 print:text-xs">
-                    {formatToman(group.totalToman)} تومان
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
+      {groups.map((group) => (
+        <OrderItemGroup
+          key={group.productId}
+          group={group}
+          compact={compact}
+          linkTargetBlank={linkTargetBlank}
+          showAccordion={showAccordion}
+        />
+      ))}
     </div>
   );
 }

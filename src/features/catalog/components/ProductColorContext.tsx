@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 type ProductColorContextType = {
   selectedColor: string | null;
@@ -22,6 +22,12 @@ export function ProductColorProvider({
 }) {
   const [selectedColor, setSelectedColor] = useState<string | null>(initialColor);
   const [selectedBundleColors, setSelectedBundleColors] = useState<Record<number, string>>(initialBundleColors);
+
+  useEffect(() => {
+    if (initialColor && !selectedColor) {
+      setSelectedColor(initialColor);
+    }
+  }, [initialColor, selectedColor]);
 
   const setSelectedBundleColor = (itemIndex: number, color: string) => {
     setSelectedBundleColors((prev) => ({

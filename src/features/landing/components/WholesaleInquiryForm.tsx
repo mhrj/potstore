@@ -53,7 +53,7 @@ export default function WholesaleInquiryForm() {
     <section id="wholesale-inquiry" className="scroll-mt-24 py-20 lg:py-28 relative">
       <div id="b2b-form" className="absolute -top-24" aria-hidden="true" />
       <Container>
-        <div className="relative overflow-hidden rounded-3xl border border-flora-700/30 bg-gradient-to-br from-flora-950 via-flora-900 to-soil-950 p-8 text-white shadow-2xl sm:p-12 lg:p-16">
+        <div className="relative overflow-hidden rounded-3xl border border-flora-700/30 bg-gradient-to-br from-flora-950 via-flora-900 to-soil-950 p-5 text-white shadow-2xl sm:p-12 lg:p-16">
           {/* Subtle botanical glow background */}
           <div
             aria-hidden
@@ -94,7 +94,7 @@ export default function WholesaleInquiryForm() {
             </div>
 
             <div className="lg:col-span-6">
-              <div className="rounded-2xl border border-white/10 bg-white/10 p-6 shadow-xl backdrop-blur-md sm:p-8">
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-4 shadow-xl backdrop-blur-md sm:p-8">
                 {success ? (
                   <div className="py-8 text-center animate-fade-in">
                     <div className="mx-auto grid size-16 place-items-center rounded-full bg-flora-500/20 text-3xl text-flora-300">
@@ -129,7 +129,7 @@ export default function WholesaleInquiryForm() {
                       <h3 className="text-lg font-black text-white">
                         فرم استعلام و دریافت پیش‌فاکتور
                       </h3>
-                      <p className="text-xs text-flora-300/70">
+                      <p className="text-xs text-flora-100">
                         مشخصات خود را وارد کنید تا کارشناسان ما با شما ارتباط بگیرند.
                       </p>
                     </div>
@@ -142,7 +142,7 @@ export default function WholesaleInquiryForm() {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
-                        <label htmlFor="wholesale-fullname" className="block text-xs font-medium text-flora-100/90 mb-1.5">
+                        <label htmlFor="wholesale-fullname" className="block text-xs font-bold text-flora-50 mb-1.5">
                           نام و نام خانوادگی <span className="text-rose-400">*</span>
                         </label>
                         <input
@@ -152,7 +152,7 @@ export default function WholesaleInquiryForm() {
                           value={formData.fullName}
                           onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                           placeholder="مثال: علی رضایی"
-                          className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-flora-300 focus:bg-white/10 focus:outline-none transition"
+                          className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-xs text-white placeholder-white/60 focus:border-flora-300 focus:bg-white/10 focus-visible:ring-2 focus-visible:ring-flora-300 focus-visible:outline-none transition"
                         />
                         {fieldErrors.fullName && (
                           <p className="mt-1 text-[11px] text-rose-300">{fieldErrors.fullName}</p>
@@ -160,7 +160,7 @@ export default function WholesaleInquiryForm() {
                       </div>
 
                       <div>
-                        <label htmlFor="wholesale-phone" className="block text-xs font-medium text-flora-100/90 mb-1.5">
+                        <label htmlFor="wholesale-phone" className="block text-xs font-bold text-flora-50 mb-1.5">
                           شماره تماس <span className="text-rose-400">*</span>
                         </label>
                         <input
@@ -171,7 +171,7 @@ export default function WholesaleInquiryForm() {
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                           placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                          className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-flora-300 focus:bg-white/10 focus:outline-none transition text-end"
+                          className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-xs text-white placeholder-white/60 focus:border-flora-300 focus:bg-white/10 focus-visible:ring-2 focus-visible:ring-flora-300 focus-visible:outline-none transition text-end"
                         />
                         {fieldErrors.phone && (
                           <p className="mt-1 text-[11px] text-rose-300">{fieldErrors.phone}</p>
@@ -181,7 +181,7 @@ export default function WholesaleInquiryForm() {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div>
-                        <label htmlFor="wholesale-business-name" className="block text-xs font-medium text-flora-100/90 mb-1.5">
+                        <label htmlFor="wholesale-business-name" className="block text-xs font-bold text-flora-50 mb-1.5">
                           نام شرکت یا مجموعه (اختیاری)
                         </label>
                         <input
@@ -191,12 +191,12 @@ export default function WholesaleInquiryForm() {
                           value={formData.businessName}
                           onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
                           placeholder="نام شرکت، هتل، کافه زنجیره‌ای یا سازمان..."
-                          className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-xs text-white placeholder-white/40 focus:border-flora-300 focus:bg-white/10 focus:outline-none transition"
+                          className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2.5 text-xs text-white placeholder-white/60 focus:border-flora-300 focus:bg-white/10 focus-visible:ring-2 focus-visible:ring-flora-300 focus-visible:outline-none transition"
                         />
                       </div>
 
                       <div>
-                        <label htmlFor="wholesale-estimated-qty" className="block text-xs font-medium text-flora-100/90 mb-1.5">
+                        <label htmlFor="wholesale-estimated-qty" className="block text-xs font-bold text-flora-50 mb-1.5">
                           حجم تقریبی سفارش
                         </label>
                         <select
@@ -204,7 +204,7 @@ export default function WholesaleInquiryForm() {
                           name="estimatedQty"
                           value={formData.estimatedQty}
                           onChange={(e) => setFormData({ ...formData, estimatedQty: e.target.value })}
-                          className="w-full rounded-xl border border-white/20 bg-flora-950 px-3.5 py-2.5 text-xs text-white focus:border-flora-300 focus:outline-none transition"
+                          className="w-full rounded-xl border border-white/20 bg-flora-950 px-3.5 py-2.5 text-xs text-white focus:border-flora-300 focus-visible:ring-2 focus-visible:ring-flora-300 focus-visible:outline-none transition"
                         >
                           <option value="۲۰ تا ۵۰ عدد">۲۰ تا ۵۰ عدد (حجم تقریبی سفارش)</option>
                           <option value="۵۰ تا ۱۰۰ عدد">۵۰ تا ۱۰۰ عدد (تخفیف همکار)</option>
@@ -215,7 +215,7 @@ export default function WholesaleInquiryForm() {
                     </div>
 
                     <div>
-                      <label htmlFor="wholesale-message" className="block text-xs font-medium text-flora-100/90 mb-1.5">
+                      <label htmlFor="wholesale-message" className="block text-xs font-bold text-flora-50 mb-1.5">
                         شرح پروژه یا نیاز سازمانی (اختیاری)
                       </label>
                       <textarea
@@ -225,7 +225,7 @@ export default function WholesaleInquiryForm() {
                         value={formData.message}
                         onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                         placeholder="سایز، رنگ، کاربری پروژه یا هر نیاز اختصاصی دیگر..."
-                        className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2 text-xs text-white placeholder-white/40 focus:border-flora-300 focus:bg-white/10 focus:outline-none transition resize-none"
+                        className="w-full rounded-xl border border-white/20 bg-white/5 px-3.5 py-2 text-xs text-white placeholder-white/60 focus:border-flora-300 focus:bg-white/10 focus-visible:ring-2 focus-visible:ring-flora-300 focus-visible:outline-none transition resize-none"
                       />
                     </div>
 

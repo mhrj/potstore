@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import ProductCard, { type ProductCardData } from '@/features/catalog/components/ProductCard';
+import { ProductCard, type ProductCardData } from '@/features/catalog';
 
 export type RelatedProductsProps = {
   similar?: ProductCardData[];

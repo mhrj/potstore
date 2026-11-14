@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
-import TagRow from '@/features/admin/components/TagRow';
+import { TagRow } from '@/features/admin';
 
 async function createTag(formData: FormData) {
   'use server';

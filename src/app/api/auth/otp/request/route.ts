@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { toEn } from '@/lib/format';
 import { sendVerificationSms } from '@/lib/sms';
@@ -11,10 +12,24 @@ import {
 
 export const runtime = 'nodejs';
 
+const otpRequestSchema = z
+  .object({
+    phone: z.string({ required_error: 'شماره موبایل را وارد کنید' }).trim().min(1, 'شماره موبایل را وارد کنید').max(30),
+  })
+  .strict();
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const rawPhone = typeof body?.phone === 'string' ? body.phone.trim() : '';
+    const rawBody = await req.json().catch(() => null);
+    const parsed = otpRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { message: parsed.error.issues[0]?.message ?? 'اطلاعات ارسالی نامعتبر است.' },
+        { status: 400 },
+      );
+    }
+
+    const rawPhone = parsed.data.phone;
 
     if (rawPhone.includes('@')) {
       return NextResponse.json(

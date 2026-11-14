@@ -8,7 +8,7 @@ export default function GlobalError({
   reset: () => void;
 }) {
   return (
-    <div className="mx-auto flex min-h-[60vh] max-w-lg flex-col items-center justify-center px-4 py-20 text-center">
+    <div className="mx-auto flex min-h-[60dvh] max-w-lg flex-col items-center justify-center px-4 py-20 text-center">
       <h1 className="text-2xl font-black text-soil-900 dark:text-dust-50">خطایی رخ داد</h1>
       <p className="mt-3 text-sm leading-7 text-soil-700/75 dark:text-dust-200/75">
         صفحه به‌درستی بارگذاری نشد. می‌توانید دوباره تلاش کنید؛ اگر مشکل ادامه

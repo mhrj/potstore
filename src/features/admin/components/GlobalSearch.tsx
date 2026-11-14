@@ -196,7 +196,7 @@ export default function GlobalSearch() {
             </div>
 
             {/* Content area */}
-            <div className="max-h-[70vh] overflow-y-auto p-4 space-y-5">
+            <div className="max-h-[70dvh] overflow-y-auto p-4 space-y-5">
               {!query.trim() && (
                 <div className="py-8 text-center text-xs text-soil-700/50 dark:text-dust-200/50">
                   <p className="text-2xl mb-2">⚡</p>
@@ -217,7 +217,7 @@ export default function GlobalSearch() {
               {/* Group: Users */}
               {results.users.length > 0 && (
                 <div>
-                  <div className="mb-2 flex items-center justify-between px-2 text-[11px] font-bold uppercase tracking-wider text-soil-700/60 dark:text-dust-200/60">
+                  <div className="mb-2 flex items-center justify-between px-2 text-[11px] font-bold text-soil-700/60 dark:text-dust-200/60">
                     <span>👤 کاربران ({toFa(results.users.length)})</span>
                     <Link
                       href="/admin/users"
@@ -278,7 +278,7 @@ export default function GlobalSearch() {
               {/* Group: Orders */}
               {results.orders.length > 0 && (
                 <div>
-                  <div className="mb-2 flex items-center justify-between px-2 text-[11px] font-bold uppercase tracking-wider text-soil-700/60 dark:text-dust-200/60">
+                  <div className="mb-2 flex items-center justify-between px-2 text-[11px] font-bold text-soil-700/60 dark:text-dust-200/60">
                     <span>📦 سفارش‌ها ({toFa(results.orders.length)})</span>
                     <Link
                       href="/admin/orders"
@@ -325,7 +325,7 @@ export default function GlobalSearch() {
               {/* Group: Products */}
               {results.products.length > 0 && (
                 <div>
-                  <div className="mb-2 flex items-center justify-between px-2 text-[11px] font-bold uppercase tracking-wider text-soil-700/60 dark:text-dust-200/60">
+                  <div className="mb-2 flex items-center justify-between px-2 text-[11px] font-bold text-soil-700/60 dark:text-dust-200/60">
                     <span>🪴 محصولات ({toFa(results.products.length)})</span>
                     <Link
                       href="/admin/products"

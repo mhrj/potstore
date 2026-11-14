@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
-import ArticleForm from '@/features/admin/components/ArticleForm';
+import { ArticleForm } from '@/features/admin';
 
 type Props = {
   params: Promise<{ id: string }>;

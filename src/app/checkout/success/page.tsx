@@ -3,8 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { formatToman, toFa, formatDateFa } from '@/lib/format';
 import Container from '@/components/ui/Container';
-import OrderItemDetails, { GroupedOrderItems } from '@/features/checkout/components/OrderItemDetails';
-import PrintInvoiceButton from '@/features/checkout/components/PrintInvoiceButton';
+import { OrderItemDetails, GroupedOrderItems, PrintInvoiceButton, groupOrderItems } from '@/features/checkout';
 
 type Props = {
   searchParams: Promise<{ ref_id?: string; order?: string }>;
@@ -73,6 +72,7 @@ export default async function SuccessPage({ searchParams }: Props) {
   // someone else paid.
   const isOwner =
     !!session && !!order && (session.sub === order.userId || session.role === 'ADMIN');
+  const groupedItems = order?.items ? groupOrderItems(order.items) : [];
 
   if (!isPaid) {
     return (
@@ -147,7 +147,7 @@ export default async function SuccessPage({ searchParams }: Props) {
               </div>
               <div className="flex justify-between gap-4 px-5 py-4">
                 <dt className="text-soil-700/70 dark:text-dust-200/70">تعداد اقلام</dt>
-                <dd className="font-bold text-soil-900 dark:text-dust-50">{toFa(order.items.length)} قلم</dd>
+                <dd className="font-bold text-soil-900 dark:text-dust-50">{toFa(groupedItems.length)} قلم کالا</dd>
               </div>
             </>
           )}
