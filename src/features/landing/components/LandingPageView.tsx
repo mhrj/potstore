@@ -8,7 +8,8 @@ import DustToFlora from '@/features/landing/components/DustToFlora';
 import TrustBar from '@/features/landing/components/TrustBar';
 import WhyChooseUs from '@/features/landing/components/WhyChooseUs';
 import WholesaleInquiryForm from '@/features/landing/components/WholesaleInquiryForm';
-import Typewriter from '@/features/landing/components/Typewriter';
+import OrganicTextReveal from '@/features/landing/components/OrganicTextReveal';
+import HeroVideo from '@/features/landing/components/HeroVideo';
 import Container from '@/components/ui/Container';
 import Skeleton from '@/components/ui/Skeleton';
 import ProductCard from '@/features/catalog/components/ProductCard';
@@ -56,7 +57,7 @@ export default function LandingPageView({
   const hero = (
     <section
       ref={heroGlowRef}
-      className="pt-16 pb-12 lg:pt-28 lg:pb-20 relative overflow-hidden bg-transparent -mb-px"
+      className="pt-12 pb-8 sm:pt-16 sm:pb-12 lg:pt-28 lg:pb-20 relative overflow-hidden bg-transparent -mb-px"
     >
       {/* Pointer glow layer */}
       <div
@@ -69,17 +70,17 @@ export default function LandingPageView({
         }}
       />
       <Container className="relative z-10">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 lg:gap-16">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 lg:gap-12">
           {/* Column 1: TEXT COLUMN (Appears on the RIGHT in RTL desktop) */}
-          <div className="w-full lg:w-5/12 flex flex-col items-center lg:items-start text-center lg:text-right">
+          <div className="w-full lg:w-5/12 flex flex-col items-center lg:items-start text-center lg:text-right relative z-20">
             {/* Badge */}
             <span className="inline-flex items-center gap-2 rounded-full border border-dust-300/70 bg-dust-100/70 dark:border-dust-100/20 dark:bg-flora-900/70 px-4 py-1.5 text-xs font-medium text-soil-700 dark:text-dust-200 backdrop-blur">
               <span className="size-1.5 rounded-full bg-dust-400 dark:bg-flora-300" />
               از خاک خالی، تا رویش سبز
             </span>
 
-            {/* H1 Title with Typewriter */}
-            <Typewriter
+            {/* H1 Title with Organic Text Reveal */}
+            <OrganicTextReveal
               text={content.home_hero_title?.body || 'به فضاهای خالی، جان بدهیم.'}
               className="mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words text-soil-900 dark:text-dust-50 text-center lg:text-right"
             />
@@ -127,22 +128,12 @@ export default function LandingPageView({
           </div>
 
           {/* Column 2: VIDEO / ILLUSTRATION COLUMN (Directly below buttons on mobile, Left in RTL desktop) */}
-          <div className="w-full lg:w-7/12 relative aspect-video flex items-center justify-center bg-transparent">
-            <video 
-              autoPlay 
-              muted 
-              playsInline 
-              preload="metadata"
-              poster="/hero-poster.jpg"
-              aria-label="انیمیشن طراحی گلدان و گیاه"
-              className="w-full h-full object-contain mix-blend-screen scale-105 sm:scale-110 lg:scale-[1.5] xl:scale-[1.6] transition-transform duration-700 pointer-events-none"
-            >
-              <source src="/hero-video.webm" type="video/webm" />
-            </video>
+          <div className="w-full lg:w-7/12 mt-8 lg:mt-0 relative z-10 pointer-events-none select-none">
+            <HeroVideo />
           </div>
 
           {/* Column 3: STATS SECTION (Appears after video on mobile, hidden on desktop) */}
-          <div className="w-full lg:hidden pt-4">
+          <div className="w-full lg:hidden pt-2">
             <dl className="flex items-center gap-6 sm:gap-8 pt-6 border-t border-soil-900/10 dark:border-transparent divide-x divide-x-reverse divide-soil-900/10 dark:divide-transparent justify-center">
               {[
                 { k: '۴۲+', v: 'مدل گلدان' },

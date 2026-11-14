@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import Typewriter from './Typewriter';
+import OrganicTextReveal from './OrganicTextReveal';
 
 type HeroTitleProps = {
   title: string;
@@ -12,7 +12,7 @@ type HeroTitleProps = {
 export default function HeroTitle({ title, subtitle }: HeroTitleProps) {
   return (
     <div className="w-full px-4 flex flex-col items-center lg:items-start text-center lg:text-right">
-      <Typewriter
+      <OrganicTextReveal
         text={title}
         className="mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words text-soil-900 dark:text-dust-50 text-center lg:text-right"
       />
