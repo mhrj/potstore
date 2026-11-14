@@ -9,7 +9,7 @@ import TrustBar from '@/features/landing/components/TrustBar';
 import WhyChooseUs from '@/features/landing/components/WhyChooseUs';
 import WholesaleInquiryForm from '@/features/landing/components/WholesaleInquiryForm';
 import OrganicTextReveal from '@/features/landing/components/OrganicTextReveal';
-import HeroVideo from '@/features/landing/components/HeroVideo';
+import HeroImage from '@/features/landing/components/HeroImage';
 import Container from '@/components/ui/Container';
 import Skeleton from '@/components/ui/Skeleton';
 import { ProductCard } from '@/features/catalog';
@@ -91,9 +91,9 @@ export default function LandingPageView({
             </p>
           </div>
 
-          {/* Block B: VIDEO - Appears 2nd on mobile (below subtitle), Col 6-12 Row 1-2 on desktop */}
-          <div className="order-2 mt-6 lg:mt-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:row-span-2 lg:self-center relative z-10 pointer-events-none select-none flex items-center justify-center w-full max-w-[350px] sm:max-w-[500px] lg:max-w-[800px] mx-auto">
-            <HeroVideo />
+          {/* Block B: IMAGE - Appears 2nd on mobile (below subtitle), Col 6-12 Row 1-2 on desktop */}
+          <div className="order-2 mt-6 lg:mt-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:row-span-2 lg:self-center relative z-10 pointer-events-none select-none flex items-center justify-center w-full max-w-[500px] lg:max-w-[800px] mx-auto overflow-hidden">
+            <HeroImage />
           </div>
 
           {/* Block C: BUTTONS (CTA) - Appears 3rd on mobile (below video), Col 1-5 Row 2 on desktop */}

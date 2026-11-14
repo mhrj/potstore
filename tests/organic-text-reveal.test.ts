@@ -82,89 +82,74 @@ test('OrganicTextReveal - splitTextIntoWordsAndChars', async (t) => {
   });
 });
 
-test('OrganicTextReveal - calculateRevealTimeline (2.71s typing / 2.29s unblur cinematic synchronization)', async (t) => {
-  await t.test('calculates exact 5.0-second total duration (2.71s typing + 2.29s focus) for default 5-word title', () => {
-    const timeline = calculateRevealTimeline(5);
+test('OrganicTextReveal - calculateRevealTimeline (clean fade-in typing effect)', async (t) => {
+  await t.test('calculates 3-to-4-second total duration (3.5s target) for default 5-word title', () => {
+    const text = 'به فضاهای خالی، جان بدهیم.';
+    const words = splitTextIntoWordsAndChars(text);
+    const timeline = calculateRevealTimeline(words);
 
     assert.equal(timeline.wordCount, 5);
-    assert.equal(timeline.typingDuration, 2.71);
-    assert.equal(timeline.focusDuration, 2.29);
-    assert.equal(timeline.totalDuration, 5.0);
-    assert.equal(timeline.wordDuration, 0.3);
-    assert.equal(timeline.wordStagger, 0.6025);
-    assert.equal(timeline.staggerChildren, 0.6025);
-    // (5 - 1) * 0.6025 + 0.3 = 2.41 + 0.3 = 2.71s typing + 2.29s focus = 5.0s
-    assert.equal(timeline.calculatedTotalDuration, 5.0);
-  });
-
-  await t.test('calculates 4-word title (word stagger (2.71 - 0.3) / 3, total 5.0s)', () => {
-    const timeline = calculateRevealTimeline(4);
-
-    assert.equal(timeline.wordCount, 4);
-    assert.equal(timeline.typingDuration, 2.71);
-    assert.equal(timeline.focusDuration, 2.29);
-    assert.equal(timeline.totalDuration, 5.0);
-    assert.equal(timeline.wordDuration, 0.3);
-    const expectedWordStagger = (2.71 - 0.3) / 3;
-    assert.ok(Math.abs(timeline.wordStagger - expectedWordStagger) < 1e-9);
-    assert.ok(Math.abs(timeline.staggerChildren - expectedWordStagger) < 1e-9);
-    assert.equal(timeline.calculatedTotalDuration, 5.0);
-  });
-
-  await t.test('calculates character stagger so the final character completes typing by 2.71s', () => {
-    const totalChars = 22;
-    const timeline = calculateRevealTimeline(5, { totalChars });
-
     assert.equal(timeline.totalChars, 22);
-    assert.equal(timeline.charDuration, 0.08);
-    // (2.71 - 0.08) / (22 - 1) = 2.63 / 21
-    const expectedStagger = 2.63 / 21;
-    assert.ok(Math.abs(timeline.charStagger - expectedStagger) < 1e-9);
-
-    // Last char start time + char duration must equal exactly 2.71s
-    const lastCharStartTime = (totalChars - 1) * timeline.charStagger;
-    const lastCharEndTime = lastCharStartTime + timeline.charDuration;
-    assert.ok(Math.abs(lastCharEndTime - 2.71) < 1e-9);
+    // Target duration is 3.5s (within 3 to 4 seconds)
+    assert.equal(timeline.targetDuration, 3.5);
+    assert.ok(timeline.calculatedTotalDuration >= 3.0 && timeline.calculatedTotalDuration <= 4.0);
+    // Character duration is 0.3s per character
+    assert.equal(timeline.charDuration, 0.3);
+    // Character stagger smoothly distributes characters
+    assert.ok(timeline.charStagger >= 0.05 && timeline.charStagger <= 0.20);
+    assert.equal(timeline.staggerChildren, timeline.charStagger);
   });
 
-  await t.test('dynamically adapts to varied word counts to always equal 5.0 seconds', () => {
-    const wordCounts = [2, 3, 6, 8, 10, 15];
+  await t.test('dynamically adapts stagger so total duration is within 3 to 4 seconds', () => {
+    const shortText = splitTextIntoWordsAndChars('خاک و گیاه'); // 8 chars
+    const shortTimeline = calculateRevealTimeline(shortText);
 
-    for (const count of wordCounts) {
-      const timeline = calculateRevealTimeline(count);
-      assert.equal(timeline.wordCount, count);
-      assert.equal(timeline.calculatedTotalDuration, 5.0);
-      assert.ok(timeline.wordStagger > 0);
-    }
+    assert.equal(shortTimeline.wordCount, 3);
+    assert.equal(shortTimeline.totalChars, 8);
+    assert.ok(shortTimeline.calculatedTotalDuration >= 1.5 && shortTimeline.calculatedTotalDuration <= 4.0);
+
+    const longText = splitTextIntoWordsAndChars('طراحی و ساخت انواع گلدان‌های بتنی، سرامیکی و مینیمال برای فضاهای سبز');
+    const longTimeline = calculateRevealTimeline(longText);
+
+    assert.equal(longTimeline.wordCount, 12);
+    assert.ok(longTimeline.totalChars > 40);
+    assert.ok(longTimeline.calculatedTotalDuration >= 2.5);
   });
 
-  await t.test('handles 1 word edge case gracefully (completes within total duration)', () => {
-    const timeline = calculateRevealTimeline(1);
+  await t.test('handles 1-character and 1-word edge cases gracefully', () => {
+    const singleWord = splitTextIntoWordsAndChars('پ');
+    const timeline = calculateRevealTimeline(singleWord);
+
     assert.equal(timeline.wordCount, 1);
-    assert.equal(timeline.wordStagger, 0);
-    assert.equal(timeline.staggerChildren, 0);
-    assert.equal(timeline.calculatedTotalDuration, 5.0);
+    assert.equal(timeline.totalChars, 1);
+    assert.equal(timeline.charStagger, 0);
+    assert.equal(timeline.calculatedTotalDuration, 0.3);
   });
 
-  await t.test('handles 0 or negative word counts gracefully', () => {
+  await t.test('handles 0 or negative inputs gracefully', () => {
     const zeroTimeline = calculateRevealTimeline(0);
     assert.equal(zeroTimeline.wordCount, 0);
+    assert.equal(zeroTimeline.totalChars, 0);
     assert.equal(zeroTimeline.calculatedTotalDuration, 0);
-    assert.equal(zeroTimeline.staggerChildren, 0);
 
-    const negativeTimeline = calculateRevealTimeline(-3);
+    const negativeTimeline = calculateRevealTimeline(-5);
     assert.equal(negativeTimeline.wordCount, 0);
+    assert.equal(negativeTimeline.totalChars, 0);
     assert.equal(negativeTimeline.calculatedTotalDuration, 0);
   });
 
-  await t.test('supports custom typing duration and focus duration configurations', () => {
-    const timeline = calculateRevealTimeline(4, { typingDuration: 3.0, focusDuration: 0.5 });
-    assert.equal(timeline.typingDuration, 3.0);
-    assert.equal(timeline.focusDuration, 0.5);
-    assert.equal(timeline.totalDuration, 3.5);
-    assert.equal(timeline.wordDuration, 0.3);
-    // (3.0 - 0.3) / 3 = 2.7 / 3 = 0.9
-    assert.ok(Math.abs(timeline.wordStagger - 0.9) < 1e-9);
-    assert.ok(Math.abs(timeline.calculatedTotalDuration - 3.5) < 1e-9);
+  await t.test('supports custom targetDuration and charStagger configurations', () => {
+    const words = splitTextIntoWordsAndChars('یک دو سه چهار');
+    const timeline = calculateRevealTimeline(words, {
+      targetDuration: 4.0,
+      charDuration: 0.25,
+      charStagger: 0.1,
+    });
+
+    assert.equal(timeline.charDuration, 0.25);
+    assert.equal(timeline.charStagger, 0.1);
+    assert.equal(timeline.totalDuration, 4.0);
+    // For 10 chars: (10 - 1) * 0.1 + 0.25 = 0.9 + 0.25 = 1.15
+    assert.ok(Math.abs(timeline.calculatedTotalDuration - 1.15) < 1e-9);
   });
 });

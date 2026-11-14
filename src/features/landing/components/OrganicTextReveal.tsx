@@ -11,86 +11,98 @@ export type WordToken = {
 };
 
 export type TimelineConfig = {
-  typingDuration?: number; // Target typing duration in seconds (default: 2.71s)
-  focusDuration?: number;  // Target focus un-blur duration in seconds (default: 2.29s)
-  totalDuration?: number;  // Total sequence duration in seconds (default: 5.0s)
-  wordDuration?: number;   // Single word duration fallback (default: 0.3s)
-  charDuration?: number;   // Single character duration (default: 0.08s)
-  totalChars?: number;     // Total character count across all words
+  targetDuration?: number; // Target total sequence duration in seconds (default: 3.5s)
+  charDuration?: number;   // Single character fade-in duration (default: 0.3s)
+  charStagger?: number;    // Stagger delay between characters
+  totalDuration?: number;  // Backwards-compatible alias for targetDuration
+  totalChars?: number;     // Optional character count
 };
 
 export type AnimationTimeline = {
   totalDuration: number;
-  typingDuration: number;
-  focusDuration: number;
-  wordCount: number;
+  targetDuration: number;
   totalChars: number;
-  wordDuration: number;
+  wordCount: number;
   charDuration: number;
-  staggerChildren: number; // Stagger per word (backwards compatible)
-  wordStagger: number;     // Stagger per word
-  charStagger: number;     // Stagger per character
+  charStagger: number;
+  staggerChildren: number; // Backwards-compatible alias for charStagger
   calculatedTotalDuration: number;
 };
 
 /**
- * Calculates dynamic stagger timing for the cinematic two-stage reveal:
- * - 0.0s to 2.71s: Characters type out while staying blurred (filter: blur(4px), opacity: 0.6).
- * - 2.71s to 5.0s: Camera focus pull where the text un-blurs into sharp focus (filter: blur(0px), opacity: 1)
- *   synchronized with the video's camera pull-back starting at 2.71s.
+ * Calculates dynamic character-by-character fade-in timeline:
+ * - Each character starts at opacity: 0 and simply fades in to opacity: 1 (no blur).
+ * - Characters stagger smoothly from right to left (RTL).
+ * - Total duration reveals smoothly over about 3 to 4 seconds (default: 3.5s).
  */
 export function calculateRevealTimeline(
-  wordCount: number,
+  wordInput: number | WordToken[] | number[],
   config: TimelineConfig = {}
 ): AnimationTimeline {
-  const focusDuration = config.focusDuration ?? 2.29;
-  const typingDuration =
-    config.typingDuration ??
-    (config.totalDuration !== undefined
-      ? Math.max(0, config.totalDuration - focusDuration)
-      : 2.71);
-  const totalDuration = typingDuration + focusDuration;
-  const wordDuration = config.wordDuration ?? 0.3;
-  const charDuration = config.charDuration ?? 0.08;
-  const totalChars = config.totalChars ?? (wordCount > 0 ? wordCount * 5 : 0);
+  const targetDuration = config.targetDuration ?? config.totalDuration ?? 3.5;
+  const charDuration = config.charDuration ?? 0.3;
 
-  if (wordCount <= 0) {
+  let wordCount = 0;
+  let totalChars = 0;
+
+  if (typeof wordInput === 'number') {
+    wordCount = Math.max(0, wordInput);
+    totalChars = config.totalChars ?? (wordCount > 0 ? wordCount * 4.4 : 0);
+  } else if (Array.isArray(wordInput)) {
+    wordCount = wordInput.length;
+    totalChars = (wordInput as Array<number | WordToken>).reduce<number>((sum: number, item) => {
+      if (typeof item === 'number') return sum + Math.max(1, item);
+      if (item && typeof item === 'object' && Array.isArray(item.chars)) {
+        return sum + item.chars.length;
+      }
+      return sum + 4;
+    }, 0);
+  }
+
+  totalChars = Math.round(totalChars);
+
+  if (wordCount <= 0 || totalChars <= 0) {
     return {
-      totalDuration,
-      typingDuration,
-      focusDuration,
-      wordCount: 0,
+      totalDuration: targetDuration,
+      targetDuration,
       totalChars: 0,
-      wordDuration,
+      wordCount: 0,
       charDuration,
-      staggerChildren: 0,
-      wordStagger: 0,
-      charStagger: 0,
+      charStagger: 0.1,
+      staggerChildren: 0.1,
       calculatedTotalDuration: 0,
     };
   }
 
-  // Word stagger: distributes words evenly over typing duration
-  const remainingWordTime = Math.max(0, typingDuration - wordDuration);
-  const wordStagger = wordCount > 1 ? remainingWordTime / (wordCount - 1) : 0;
+  if (totalChars === 1) {
+    return {
+      totalDuration: targetDuration,
+      targetDuration,
+      totalChars: 1,
+      wordCount,
+      charDuration,
+      charStagger: 0,
+      staggerChildren: 0,
+      calculatedTotalDuration: charDuration,
+    };
+  }
 
-  // Character stagger: distributes characters evenly so the last character finishes typing by typingDuration
-  const remainingCharTime = Math.max(0, typingDuration - charDuration);
-  const charStagger = totalChars > 1 ? remainingCharTime / (totalChars - 1) : 0;
+  let charStagger = config.charStagger;
+  if (charStagger === undefined) {
+    const idealStagger = (targetDuration - charDuration) / (totalChars - 1);
+    charStagger = Math.max(0.04, Math.min(0.25, idealStagger));
+  }
 
-  const calculatedTotalDuration = typingDuration + focusDuration;
+  const calculatedTotalDuration = (totalChars - 1) * charStagger + charDuration;
 
   return {
-    totalDuration,
-    typingDuration,
-    focusDuration,
-    wordCount,
+    totalDuration: targetDuration,
+    targetDuration,
     totalChars,
-    wordDuration,
+    wordCount,
     charDuration,
-    staggerChildren: wordStagger,
-    wordStagger,
     charStagger,
+    staggerChildren: charStagger,
     calculatedTotalDuration,
   };
 }
@@ -129,9 +141,8 @@ type OrganicTextRevealProps = {
   className?: string;
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'span' | 'div';
   highlightWord?: string | null;
-  typingDuration?: number; // default: 2.71s
-  focusDuration?: number;  // default: 2.29s
-  targetDuration?: number; // backwards compatibility alias for totalDuration
+  targetDuration?: number; // Target total sequence duration (default: ~3.5s)
+  charStagger?: number;
 };
 
 export default function OrganicTextReveal({
@@ -139,127 +150,73 @@ export default function OrganicTextReveal({
   className = 'mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words max-w-full text-soil-900 dark:text-dust-50 text-center lg:text-start',
   as: Component = 'h1',
   highlightWord = 'جان',
-  typingDuration: propTypingDuration,
-  focusDuration: propFocusDuration = 2.29,
-  targetDuration,
+  targetDuration = 3.5,
+  charStagger,
 }: OrganicTextRevealProps) {
   const shouldReduceMotion = useReducedMotion();
   const [scope, animate] = useAnimate();
-  const [isFocused, setIsFocused] = useState(false);
+  const [isDone, setIsDone] = useState(false);
 
   const words = useMemo(
     () => splitTextIntoWordsAndChars(text, highlightWord),
     [text, highlightWord]
   );
 
-  const totalChars = useMemo(
-    () => words.reduce((acc, word) => acc + word.chars.length, 0),
-    [words]
-  );
-
-  const typingDuration =
-    propTypingDuration ??
-    (targetDuration !== undefined
-      ? Math.max(0, targetDuration - propFocusDuration)
-      : 2.71);
-
   const timeline = useMemo(
     () =>
-      calculateRevealTimeline(words.length, {
-        typingDuration,
-        focusDuration: propFocusDuration,
-        totalChars,
+      calculateRevealTimeline(words, {
+        targetDuration,
+        charStagger,
       }),
-    [words.length, typingDuration, propFocusDuration, totalChars]
+    [words, targetDuration, charStagger]
   );
 
   useEffect(() => {
     if (shouldReduceMotion) return;
 
     let isMounted = true;
-    let typingControls: AnimationPlaybackControls | null = null;
-    let focusControls: AnimationPlaybackControls | null = null;
+    let controls: AnimationPlaybackControls | null = null;
 
-    const startCinematicAnimation = () => {
+    // Set initial opacity to 0
+    animate('span[data-char]', { opacity: 0 }, { duration: 0 });
+
+    const startTypingFadeIn = () => {
       if (!scope.current || !isMounted) return;
 
-      // 1. Initial blurred state on container (blur 4px, opacity 0.6)
-      animate(
-        scope.current,
-        { filter: 'blur(4px)', opacity: 0.6 },
-        { duration: 0 }
-      );
-
-      // Characters start hidden
-      animate(
+      controls = animate(
         'span[data-char]',
-        { opacity: 0, y: 3 },
-        { duration: 0 }
-      );
-
-      // 2. Typing Phase (0.0s to 2.71s):
-      // Stagger characters across the typing duration (2.71s) while remaining blurred and 0.6 opacity
-      typingControls = animate(
-        'span[data-char]',
-        { opacity: 1, y: 0 },
+        { opacity: 1 },
         {
-          delay: stagger(timeline.charStagger, { startDelay: 0 }),
           duration: timeline.charDuration,
+          delay: stagger(timeline.charStagger),
           ease: 'easeOut',
         }
       );
 
-      // 3. Unblur / Focus Phase (2.71s to 5.0s):
-      // At exactly 2.71s, animate the entire text container from blur(4px) to blur(0px)
-      // and opacity 0.6 to 1 over the remaining 2.29s of the video
-      focusControls = animate(
-        scope.current,
-        { filter: ['blur(4px)', 'blur(0px)'], opacity: [0.6, 1] },
-        {
-          delay: timeline.typingDuration, // 2.71s
-          duration: timeline.focusDuration, // 2.29s
-          ease: [0.16, 1, 0.3, 1],
-        }
-      );
-
-      focusControls
+      controls
         .then(() => {
-          if (isMounted) {
-            setIsFocused(true);
-          }
+          if (isMounted) setIsDone(true);
         })
         .catch(() => {});
     };
 
-    let started = false;
-    const trigger = () => {
-      if (started || !isMounted) return;
-      started = true;
-      startCinematicAnimation();
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('pot-hero-video-play', trigger, { once: true });
-    }
-
-    // Safety fallback timer so text reveal always starts promptly
-    const fallbackTimer = setTimeout(trigger, 40);
+    const timer = setTimeout(startTypingFadeIn, 40);
 
     return () => {
       isMounted = false;
-      clearTimeout(fallbackTimer);
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('pot-hero-video-play', trigger);
+      clearTimeout(timer);
+      if (controls) {
+        try {
+          controls.stop();
+        } catch {}
       }
-      if (typingControls) typingControls.stop();
-      if (focusControls) focusControls.stop();
     };
   }, [shouldReduceMotion, scope, timeline]);
 
-  // Fallback for reduced motion: render plain text instantly without animations or blur
+  // Fallback for reduced motion: display crisp final text immediately
   if (shouldReduceMotion) {
     return (
-      <Component className={className} dir="rtl" style={{ filter: 'none', opacity: 1 }}>
+      <Component className={className} dir="rtl" style={{ opacity: 1 }}>
         {words.map((word, wordIdx) => (
           <React.Fragment key={wordIdx}>
             <span
@@ -286,11 +243,7 @@ export default function OrganicTextReveal({
       className={className}
       aria-label={text}
       dir="rtl"
-      style={{
-        filter: isFocused ? 'none' : 'blur(4px)',
-        opacity: isFocused ? 1 : 0.6,
-        willChange: isFocused ? 'auto' : 'filter, opacity',
-      }}
+      style={{ opacity: 1 }}
     >
       <span aria-hidden="true" className="inline break-words">
         {words.map((word, wordIdx) => (
@@ -307,7 +260,7 @@ export default function OrganicTextReveal({
                   key={charIdx}
                   data-char
                   className="inline"
-                  style={{ opacity: 0 }}
+                  style={{ opacity: isDone ? 1 : 0 }}
                 >
                   {char}
                 </span>
