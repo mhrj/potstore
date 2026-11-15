@@ -92,7 +92,7 @@ export default function LandingPageView({
           </div>
 
           {/* Block B: IMAGE - Appears 2nd on mobile (below subtitle), Col 6-12 Row 1-2 on desktop */}
-          <div className="order-2 mt-6 lg:mt-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:row-span-2 lg:self-center relative z-10 pointer-events-none select-none flex items-center justify-center w-full max-w-[500px] lg:max-w-[800px] mx-auto overflow-hidden">
+          <div className="order-2 mt-6 lg:mt-0 lg:col-span-7 lg:col-start-6 lg:row-start-1 lg:row-span-2 lg:self-center relative z-10 pointer-events-none select-none flex items-center justify-center w-full max-w-[500px] lg:max-w-[800px] mx-auto">
             <HeroImage />
           </div>
 

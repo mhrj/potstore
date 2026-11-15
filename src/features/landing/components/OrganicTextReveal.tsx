@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { useAnimate, useReducedMotion, stagger, type AnimationPlaybackControls } from 'framer-motion';
+import React, { useMemo } from 'react';
+import { motion, useReducedMotion, type Variants } from 'framer-motion';
 
 export type WordToken = {
   raw: string;
@@ -11,9 +11,10 @@ export type WordToken = {
 };
 
 export type TimelineConfig = {
-  targetDuration?: number; // Target total sequence duration in seconds (default: 3.5s)
-  charDuration?: number;   // Single character fade-in duration (default: 0.3s)
-  charStagger?: number;    // Stagger delay between characters
+  targetDuration?: number; // Target total sequence duration in seconds (default: 1.5s)
+  charDuration?: number;   // Single character fade-in duration (default: 0.15s)
+  charStagger?: number;    // Stagger delay between characters (default: 0.03s)
+  staggerChildren?: number;// Stagger delay alias
   totalDuration?: number;  // Backwards-compatible alias for targetDuration
   totalChars?: number;     // Optional character count
 };
@@ -32,15 +33,15 @@ export type AnimationTimeline = {
 /**
  * Calculates dynamic character-by-character fade-in timeline:
  * - Each character starts at opacity: 0 and simply fades in to opacity: 1 (no blur).
- * - Characters stagger smoothly from right to left (RTL).
- * - Total duration reveals smoothly over about 3 to 4 seconds (default: 3.5s).
+ * - Characters stagger smoothly with a fast delay (0.025s - 0.03s).
+ * - Completes rapidly in about 1.5 seconds.
  */
 export function calculateRevealTimeline(
   wordInput: number | WordToken[] | number[],
   config: TimelineConfig = {}
 ): AnimationTimeline {
-  const targetDuration = config.targetDuration ?? config.totalDuration ?? 3.5;
-  const charDuration = config.charDuration ?? 0.3;
+  const targetDuration = config.targetDuration ?? config.totalDuration ?? 1.5;
+  const charDuration = config.charDuration ?? 0.15;
 
   let wordCount = 0;
   let totalChars = 0;
@@ -68,8 +69,8 @@ export function calculateRevealTimeline(
       totalChars: 0,
       wordCount: 0,
       charDuration,
-      charStagger: 0.1,
-      staggerChildren: 0.1,
+      charStagger: 0.03,
+      staggerChildren: 0.03,
       calculatedTotalDuration: 0,
     };
   }
@@ -87,10 +88,14 @@ export function calculateRevealTimeline(
     };
   }
 
-  let charStagger = config.charStagger;
+  let charStagger = config.charStagger ?? config.staggerChildren;
   if (charStagger === undefined) {
-    const idealStagger = (targetDuration - charDuration) / (totalChars - 1);
-    charStagger = Math.max(0.04, Math.min(0.25, idealStagger));
+    if (config.targetDuration !== undefined || config.totalDuration !== undefined) {
+      charStagger = Math.max(0.025, Math.min(0.1, (targetDuration - charDuration) / (totalChars - 1)));
+    } else {
+      // Fast, snappy typing default (0.03s per character)
+      charStagger = 0.03;
+    }
   }
 
   const calculatedTotalDuration = (totalChars - 1) * charStagger + charDuration;
@@ -141,8 +146,33 @@ type OrganicTextRevealProps = {
   className?: string;
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'span' | 'div';
   highlightWord?: string | null;
-  targetDuration?: number; // Target total sequence duration (default: ~3.5s)
-  charStagger?: number;
+  targetDuration?: number; // Target total sequence duration (default: ~1.5s)
+  charStagger?: number;    // Stagger delay per character (default: 0.03s)
+  staggerChildren?: number;// Stagger delay alias
+};
+
+const containerVariants: Variants = {
+  hidden: { opacity: 1 },
+  visible: (staggerDelay: number = 0.03) => ({
+    opacity: 1,
+    transition: {
+      staggerChildren: staggerDelay,
+      delayChildren: 0.02,
+    },
+  }),
+};
+
+const charVariants: Variants = {
+  hidden: {
+    opacity: 0,
+  },
+  visible: {
+    opacity: 1,
+    transition: {
+      duration: 0.15,
+      ease: 'easeOut',
+    },
+  },
 };
 
 export default function OrganicTextReveal({
@@ -150,12 +180,11 @@ export default function OrganicTextReveal({
   className = 'mt-6 text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-black leading-tight break-words max-w-full text-soil-900 dark:text-dust-50 text-center lg:text-start',
   as: Component = 'h1',
   highlightWord = 'جان',
-  targetDuration = 3.5,
+  targetDuration = 1.5,
   charStagger,
+  staggerChildren: propStaggerChildren,
 }: OrganicTextRevealProps) {
   const shouldReduceMotion = useReducedMotion();
-  const [scope, animate] = useAnimate();
-  const [isDone, setIsDone] = useState(false);
 
   const words = useMemo(
     () => splitTextIntoWordsAndChars(text, highlightWord),
@@ -166,52 +195,10 @@ export default function OrganicTextReveal({
     () =>
       calculateRevealTimeline(words, {
         targetDuration,
-        charStagger,
+        charStagger: charStagger ?? propStaggerChildren,
       }),
-    [words, targetDuration, charStagger]
+    [words, targetDuration, charStagger, propStaggerChildren]
   );
-
-  useEffect(() => {
-    if (shouldReduceMotion) return;
-
-    let isMounted = true;
-    let controls: AnimationPlaybackControls | null = null;
-
-    // Set initial opacity to 0
-    animate('span[data-char]', { opacity: 0 }, { duration: 0 });
-
-    const startTypingFadeIn = () => {
-      if (!scope.current || !isMounted) return;
-
-      controls = animate(
-        'span[data-char]',
-        { opacity: 1 },
-        {
-          duration: timeline.charDuration,
-          delay: stagger(timeline.charStagger),
-          ease: 'easeOut',
-        }
-      );
-
-      controls
-        .then(() => {
-          if (isMounted) setIsDone(true);
-        })
-        .catch(() => {});
-    };
-
-    const timer = setTimeout(startTypingFadeIn, 40);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(timer);
-      if (controls) {
-        try {
-          controls.stop();
-        } catch {}
-      }
-    };
-  }, [shouldReduceMotion, scope, timeline]);
 
   // Fallback for reduced motion: display crisp final text immediately
   if (shouldReduceMotion) {
@@ -237,9 +224,14 @@ export default function OrganicTextReveal({
     );
   }
 
+  const MotionComponent = motion[Component] as typeof motion.h1;
+
   return (
-    <Component
-      ref={scope}
+    <MotionComponent
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      custom={timeline.charStagger}
       className={className}
       aria-label={text}
       dir="rtl"
@@ -256,14 +248,14 @@ export default function OrganicTextReveal({
               }`}
             >
               {word.chars.map((char, charIdx) => (
-                <span
+                <motion.span
                   key={charIdx}
+                  variants={charVariants}
                   data-char
                   className="inline"
-                  style={{ opacity: isDone ? 1 : 0 }}
                 >
                   {char}
-                </span>
+                </motion.span>
               ))}
             </span>
             {wordIdx < words.length - 1 && (
@@ -272,6 +264,6 @@ export default function OrganicTextReveal({
           </React.Fragment>
         ))}
       </span>
-    </Component>
+    </MotionComponent>
   );
 }

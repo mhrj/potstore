@@ -170,31 +170,6 @@
     transform: none !important;
     transition: none !important;
   }
-
-  .hero-draw-reveal {
-    animation: none !important;
-    clip-path: inset(0% 0 0 0) !important;
-    transform: scale(1) !important;
-  }
-}
-
-/* ==========================================================================
-   Hero Botanical Sketch Draw Reveal Animation
-   ========================================================================== */
-@keyframes draw-reveal {
-  0% {
-    clip-path: inset(100% 0 0 0);
-    transform: scale(0.95);
-  }
-  100% {
-    clip-path: inset(0% 0 0 0);
-    transform: scale(1);
-  }
-}
-
-.hero-draw-reveal {
-  animation: draw-reveal 4.5s ease-out forwards;
-  will-change: clip-path, transform;
 }
 
 /* ==========================================================================
