@@ -19,6 +19,9 @@ export const metadata: Metadata = {
       'کیوریتور و تأمین‌کننده گلدان، خاک و ابزار نگهداری گیاهان با بهترین کارگاه‌های ایران — خرده و عمده.',
     type: 'website',
   },
+  other: {
+    enamad: '10323305',
+  },
 };
 
 async function getFeatured() {
