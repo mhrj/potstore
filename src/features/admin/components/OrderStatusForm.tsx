@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Select from '@/components/ui/Select';
 import { updateOrderStatusAction } from '@/features/admin/actions/order-actions';
 import type { OrderStatus } from '@/lib/orders';
 
@@ -75,32 +76,32 @@ export default function OrderStatusForm({
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         <div className="block">
           <label htmlFor="order-status-select" className="block text-xs font-bold text-soil-900 dark:text-dust-200">وضعیت سفارش</label>
-          <select
+          <Select
             id="order-status-select"
             name="status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="mt-1.5 w-full rounded-xl border border-soil-900/15 dark:border-dust-50/20 bg-white dark:bg-flora-950 text-soil-900 dark:text-dust-50 px-3 py-2.5 text-sm outline-none focus:border-flora-500"
+            containerClassName="mt-1.5"
           >
             {STATUSES.map((s) => (
               <option key={s.key} value={s.key}>{s.label}</option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="block">
           <label htmlFor="order-carrier-select" className="block text-xs font-bold text-soil-900 dark:text-dust-200">شرکت حمل و نقل</label>
-          <select
+          <Select
             id="order-carrier-select"
             name="carrier"
             value={carrier}
             onChange={(e) => setCarrier(e.target.value)}
-            className="mt-1.5 w-full rounded-xl border border-soil-900/15 dark:border-dust-50/20 bg-white dark:bg-flora-950 text-soil-900 dark:text-dust-50 px-3 py-2.5 text-sm outline-none focus:border-flora-500"
+            containerClassName="mt-1.5"
           >
             {CARRIERS.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="block">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
+import Select from '@/components/ui/Select';
 
 type Props = {
   tags: { name: string; slug: string }[];
@@ -26,11 +27,11 @@ export default function TagFilterSelect({ tags, tagSlug }: Props) {
   };
 
   return (
-    <select
+    <Select
       name="tag"
       value={tagSlug}
       onChange={handleChange}
-      className="mt-2 w-full rounded-xl border border-soil-900/15 bg-white px-4 py-2.5 text-sm text-soil-900 outline-none transition focus:border-flora-500 focus:dark:border-flora-500 dark:border-dust-50/20 dark:bg-flora-950 dark:text-dust-50"
+      containerClassName="mt-2 min-w-[140px] sm:min-w-[150px]"
     >
       <option value="">همه</option>
       {tags.map((t) => (
@@ -38,6 +39,6 @@ export default function TagFilterSelect({ tags, tagSlug }: Props) {
           {t.name}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { toFa } from '@/lib/format';
 import Container from '@/components/ui/Container';
+import Select from '@/components/ui/Select';
 import ProductCard from '@/features/catalog/components/ProductCard';
 import TagFilterSelect from '@/features/catalog/components/TagFilterSelect';
 import { BotanicalCanvas } from '@/features/landing';
@@ -147,18 +148,18 @@ export default function ProductCatalogView({
           <form
             method="get"
             action="/products"
-            className="flex flex-col gap-4 lg:flex-row lg:items-end"
+            className="flex flex-wrap gap-4 items-end justify-between"
           >
             {categorySlug && <input type="hidden" name="category" value={categorySlug} />}
-            <div className="flex flex-wrap items-end gap-4">
-              <label className="min-w-56 flex-1 text-xs font-bold text-soil-700/80 dark:text-dust-200/80">
+            <div className="flex flex-wrap gap-4 items-end flex-1 min-w-[280px]">
+              <label className="min-w-[200px] sm:min-w-[240px] flex-1 text-xs font-bold text-soil-700/80 dark:text-dust-200/80">
                 جست‌وجو
                 <input
                   type="search"
                   name="q"
                   defaultValue={q}
                   placeholder="نام، جنس یا رنگ محصول…"
-                  className="mt-2 w-full rounded-xl border border-soil-900/15 bg-white px-4 py-2.5 text-sm text-soil-900 outline-none transition focus:border-flora-500 focus:ring-2 focus:ring-flora-500/20 dark:border-dust-50/20 dark:bg-flora-950 dark:text-dust-50 dark:placeholder:text-dust-400 focus:dark:border-flora-500"
+                  className="mt-2 w-full h-[42px] rounded-xl border border-soil-900/15 bg-white/80 px-4 py-2.5 text-sm text-soil-900 outline-none transition focus:border-flora-500 focus:ring-2 focus:ring-flora-500/20 dark:border-dust-50/20 dark:bg-flora-900 dark:text-dust-50 dark:placeholder:text-dust-400 focus:dark:border-flora-500"
                 />
               </label>
 
@@ -169,7 +170,7 @@ export default function ProductCatalogView({
 
               <button
                 type="submit"
-                className="rounded-xl bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 transition-colors px-6 py-2.5 text-xs font-black hover:bg-flora-700 cursor-pointer shadow-sm"
+                className="h-[42px] inline-flex items-center justify-center rounded-xl bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 transition-colors px-6 text-sm font-black hover:bg-flora-700 cursor-pointer shadow-sm"
               >
                 اعمال
               </button>
@@ -177,27 +178,27 @@ export default function ProductCatalogView({
               {filtered && (
                 <Link
                   href="/products"
-                  className="rounded-xl border border-soil-900/15 bg-white px-5 py-2.5 text-xs font-bold text-soil-900 transition-colors hover:bg-dust-100 dark:border-dust-50/20 dark:bg-flora-900 dark:text-dust-50 dark:hover:bg-flora-950"
+                  className="h-[42px] inline-flex items-center justify-center rounded-xl border border-soil-900/15 bg-white/80 px-5 text-xs font-bold text-soil-900 transition-colors hover:bg-dust-100 dark:border-dust-50/20 dark:bg-flora-900 dark:text-dust-50 dark:hover:bg-flora-950"
                 >
                   حذف فیلترها
                 </Link>
               )}
             </div>
 
-            <div className="flex items-end border-t border-soil-900/10 pt-4 lg:ms-auto lg:border-s lg:border-t-0 lg:border-soil-900/10 lg:ps-4 lg:pt-0 dark:border-dust-50/10 dark:lg:border-dust-50/10">
+            <div className="flex items-end pt-2 sm:pt-0">
               <label className="text-xs font-bold text-soil-700/80 dark:text-dust-200/80">
                 ترتیب
-                <select
+                <Select
                   name="sort"
                   defaultValue={sort}
-                  className="mt-2 w-full rounded-xl border border-soil-900/15 bg-white px-4 py-2.5 text-sm text-soil-900 outline-none transition focus:border-flora-500 dark:border-dust-50/20 dark:bg-flora-950 dark:text-dust-50"
+                  containerClassName="mt-2 min-w-[160px]"
                 >
                   {(Object.keys(SORTS) as SortKey[]).map((key) => (
                     <option key={key} value={key}>
                       {SORTS[key].label}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
             </div>
           </form>

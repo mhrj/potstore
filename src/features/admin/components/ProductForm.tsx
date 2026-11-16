@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import Select from '@/components/ui/Select';
 import type { ProductFeature, BundleItem, ColorOption } from '@/lib/product-features';
 import { formatToman, toFa } from '@/lib/format';
 import { numberToWordsFa } from '@/lib/number-to-words';
@@ -730,7 +731,7 @@ export default function ProductForm({
             <label htmlFor="product-categoryId" className={labelCls}>
               دسته‌بندی
             </label>
-            <select
+            <Select
               id="product-categoryId"
               name="categoryId"
               value={form.categoryId ?? ''}
@@ -742,7 +743,7 @@ export default function ProductForm({
                   update('material', matched.name);
                 }
               }}
-              className={inputCls}
+              containerClassName="mt-1.5"
             >
               <option value="">
                 {allCategories.length === 0 ? 'ابتدا یک دسته‌بندی ایجاد کنید.' : 'انتخاب دسته‌بندی…'}
@@ -752,7 +753,7 @@ export default function ProductForm({
                   {cat.name}
                 </option>
               ))}
-            </select>
+            </Select>
             {allCategories.length === 0 && (
               <p className="mt-1.5 text-xs text-amber-700 font-medium">
                 ابتدا یک دسته‌بندی ایجاد کنید.
@@ -1250,7 +1251,7 @@ export default function ProductForm({
                           <label htmlFor={`bundle-item-product-${idx}`} className="text-[11px] text-soil-700/70 dark:text-dust-200/70">
                             تکمیل از محصولات:
                           </label>
-                          <select
+                          <Select
                             id={`bundle-item-product-${idx}`}
                             name={`bundleItemProduct_${idx}`}
                             value={item.productId ?? ''}
@@ -1278,7 +1279,8 @@ export default function ProductForm({
                               }
                               update('bundleItems', next);
                             }}
-                            className="rounded-lg border border-soil-900/15 dark:border-dust-50/20 bg-white dark:bg-flora-900 px-2 py-1 text-xs text-soil-900 dark:text-dust-50 outline-none focus:border-flora-500"
+                            containerClassName="inline-block w-auto min-w-[180px] max-w-[280px]"
+                            className="py-1 pe-8 ps-2.5 text-xs rounded-lg"
                           >
                             <option value="">-- انتخاب گلدان از فروشگاه --</option>
                             {catalogProducts.map((p) => (
@@ -1286,7 +1288,7 @@ export default function ProductForm({
                                 {p.name} ({formatToman(p.basePriceToman)})
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
                       )}
                     </div>

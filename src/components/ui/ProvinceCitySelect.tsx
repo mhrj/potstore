@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { IRAN_PROVINCES, getCitiesForProvince } from '@/lib/iran-data';
 import { FormError } from '@/components/ui/FormError';
+import Select from '@/components/ui/Select';
 
 export type ProvinceCityValue = {
   province: string;
@@ -69,18 +70,15 @@ export default function ProvinceCitySelect({
       >
         <span>{provinceLabel}</span>
         {required && <span className="text-red-500 ms-0.5">*</span>}
-        <select
+        <Select
           id={`${idPrefix}-province`}
           name="province"
           value={value.province || ''}
           onChange={handleProvinceChange}
           required={required}
           disabled={disabled}
-          className={`mt-1 w-full rounded-xl border bg-dust-50 dark:bg-flora-950 px-3 py-2.5 text-sm text-soil-900 dark:text-dust-50 outline-none transition cursor-pointer ${
-            errorProvince
-              ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
-              : 'border-soil-900/10 dark:border-dust-50/20 focus:border-flora-500 focus:dark:border-flora-500 focus:ring-2 focus:ring-flora-500/20'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          error={Boolean(errorProvince)}
+          containerClassName="mt-1"
         >
           <option value="" disabled className="dark:bg-flora-950 dark:text-dust-50">
             {provincePlaceholder}
@@ -90,7 +88,7 @@ export default function ProvinceCitySelect({
               {p.name}
             </option>
           ))}
-        </select>
+        </Select>
         <FormError message={errorProvince} />
       </label>
 
@@ -101,18 +99,15 @@ export default function ProvinceCitySelect({
       >
         <span>{cityLabel}</span>
         {required && <span className="text-red-500 ms-0.5">*</span>}
-        <select
+        <Select
           id={`${idPrefix}-city`}
           name="city"
           value={value.city || ''}
           onChange={handleCityChange}
           required={required}
           disabled={isCityDisabled}
-          className={`mt-1 w-full rounded-xl border bg-dust-50 dark:bg-flora-950 px-3 py-2.5 text-sm text-soil-900 dark:text-dust-50 outline-none transition cursor-pointer ${
-            errorCity
-              ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
-              : 'border-soil-900/10 dark:border-dust-50/20 focus:border-flora-500 focus:dark:border-flora-500 focus:ring-2 focus:ring-flora-500/20'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          error={Boolean(errorCity)}
+          containerClassName="mt-1"
         >
           <option value="" disabled className="dark:bg-flora-950 dark:text-dust-50">
             {value.province ? cityPlaceholder : 'ابتدا استان را انتخاب کنید'}
@@ -126,7 +121,7 @@ export default function ProvinceCitySelect({
           {value.city && !availableCities.includes(value.city) && (
             <option value={value.city} className="dark:bg-flora-950 dark:text-dust-50">{value.city}</option>
           )}
-        </select>
+        </Select>
         <FormError message={errorCity} />
       </label>
     </div>

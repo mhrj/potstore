@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Container from '@/components/ui/Container';
+import Select from '@/components/ui/Select';
 import { submitWholesaleInquiryAction } from '@/features/landing/actions/wholesale-actions';
 
 export default function WholesaleInquiryForm() {
@@ -69,7 +70,7 @@ export default function WholesaleInquiryForm() {
               <span className="inline-flex items-center gap-1.5 rounded-full border border-flora-300/30 bg-flora-700/50 px-4 py-1.5 text-xs font-bold text-flora-300 backdrop-blur">
                 🏢 بخش همکاری سازمانی و B2B
               </span>
-              <h2 className="mt-4 text-3xl font-black leading-tight sm:text-4xl">
+              <h2 className="mt-4 text-2xl sm:text-3xl font-black leading-tight md:text-4xl">
                 تأمین تخصصی برای هتل‌ها، پروژه‌های تجاری و برندها
               </h2>
               <p className="mt-5 text-sm leading-8 text-flora-100/85 sm:text-base">
@@ -199,18 +200,18 @@ export default function WholesaleInquiryForm() {
                         <label htmlFor="wholesale-estimated-qty" className="block text-xs font-bold text-flora-50 mb-1.5">
                           حجم تقریبی سفارش
                         </label>
-                        <select
+                        <Select
                           id="wholesale-estimated-qty"
                           name="estimatedQty"
                           value={formData.estimatedQty}
                           onChange={(e) => setFormData({ ...formData, estimatedQty: e.target.value })}
-                          className="w-full rounded-xl border border-white/20 bg-flora-950 px-3.5 py-2.5 text-xs text-white focus:border-flora-300 focus-visible:ring-2 focus-visible:ring-flora-300 focus-visible:outline-none transition"
+                          className="bg-flora-950 border-white/20 text-white focus:border-flora-300 focus:ring-flora-300/30 text-xs py-2.5"
                         >
                           <option value="۲۰ تا ۵۰ عدد">۲۰ تا ۵۰ عدد (حجم تقریبی سفارش)</option>
                           <option value="۵۰ تا ۱۰۰ عدد">۵۰ تا ۱۰۰ عدد (تخفیف همکار)</option>
                           <option value="۱۰۰ تا ۵۰۰ عدد">۱۰۰ تا ۵۰۰ عدد (تخفیف ویژه کارگاهی)</option>
                           <option value="بیش از ۵۰۰ عدد">بیش از ۵۰۰ عدد (تولید اختصاصی)</option>
-                        </select>
+                        </Select>
                       </div>
                     </div>
 

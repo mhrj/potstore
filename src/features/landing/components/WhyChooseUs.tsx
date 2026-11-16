@@ -81,7 +81,7 @@ export default function WhyChooseUs() {
     <section className="py-20 lg:py-28 relative">
       <Container>
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-black text-soil-900 dark:text-dust-50 sm:text-4xl">
+          <h2 className="text-2xl sm:text-3xl font-black text-soil-900 dark:text-dust-50 md:text-4xl">
             چرا پات استور؟
           </h2>
           <p className="mt-4 text-base leading-8 text-soil-700/85 dark:text-dust-200/85 sm:text-lg">
@@ -95,7 +95,7 @@ export default function WhyChooseUs() {
 
             const cardBody = (
               <div
-                className={`flex h-full flex-col justify-between rounded-3xl border ${adv.border} dark:border-dust-100/10 bg-gradient-to-b ${adv.color} dark:from-flora-900 dark:to-flora-900 dark:bg-flora-900 p-7 shadow-sm text-start ${
+                className={`flex h-full flex-col justify-between rounded-3xl border ${adv.border} dark:border-dust-100/10 bg-gradient-to-b ${adv.color} dark:from-flora-900 dark:to-flora-900 dark:bg-flora-900 p-5 sm:p-7 shadow-sm text-start ${
                   isClickable
                     ? 'transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:hover:shadow-black/40'
                     : ''

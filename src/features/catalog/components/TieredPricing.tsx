@@ -850,17 +850,17 @@ export default function TieredPricing({
 
       {allowBatch && sorted.length > 0 && (
         <div className="overflow-x-auto rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900">
-          <table className="w-full min-w-[340px] text-sm">
+          <table className="w-full min-w-[290px] sm:min-w-[340px] text-xs sm:text-sm">
             <caption className="sr-only">ماتریس قیمت بر اساس تعداد</caption>
             <thead className="bg-dust-50 dark:bg-flora-950">
               <tr className="text-soil-700/70 dark:text-dust-200/70">
-                <th scope="col" className="px-4 py-3 text-start font-medium">
+                <th scope="col" className="px-3 sm:px-4 py-2.5 sm:py-3 text-start font-medium">
                   {isBundle ? 'تعداد بسته' : 'تعداد'}
                 </th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">
+                <th scope="col" className="px-3 sm:px-4 py-2.5 sm:py-3 text-start font-medium">
                   {isBundle ? 'قیمت هر بسته' : 'قیمت هر عدد'}
                 </th>
-                <th scope="col" className="px-4 py-3 text-start font-medium">تخفیف</th>
+                <th scope="col" className="px-3 sm:px-4 py-2.5 sm:py-3 text-start font-medium">تخفیف</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-soil-900/5 dark:divide-dust-50/5">
@@ -888,12 +888,12 @@ export default function TieredPricing({
                     className={isActive ? 'bg-flora-100/60 dark:bg-flora-900/40' : undefined}
                     aria-current={isActive ? 'true' : undefined}
                   >
-                    <td className="px-4 py-3.5 font-medium text-soil-900 dark:text-dust-50">
+                    <td className="px-3 sm:px-4 py-3 sm:py-3.5 font-medium text-soil-900 dark:text-dust-50">
                       {rangeEnd
                         ? `${toFa(t.minQuantity)} تا ${toFa(rangeEnd)} ${isBundle ? 'بسته' : 'عدد'}`
                         : `${toFa(t.minQuantity)} ${isBundle ? 'بسته' : 'عدد'} به بالا`}
                     </td>
-                    <td className="px-4 py-3.5 font-bold text-flora-900 dark:text-flora-300">
+                    <td className="px-3 sm:px-4 py-3 sm:py-3.5 font-bold text-flora-900 dark:text-flora-300">
                       <div>
                         <span>{formatToman(tierUnitPrice)}</span>
                         {tierUnitPrice >= 1000 && (
@@ -903,7 +903,7 @@ export default function TieredPricing({
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3.5">
+                    <td className="px-3 sm:px-4 py-3 sm:py-3.5">
                       {off > 0 ? (
                         <span className="font-bold text-emerald-600 dark:text-emerald-400">{toFa(off)}٪</span>
                       ) : (

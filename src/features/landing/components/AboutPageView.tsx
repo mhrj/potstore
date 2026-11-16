@@ -6,7 +6,7 @@ export default function AboutPageView({ content }: { content: ContentMap }) {
   return (
     <Container className="py-12 lg:py-16">
       <p className="text-xs font-bold text-flora-700 dark:text-flora-300">پات استور</p>
-      <h1 className="mt-2 text-3xl font-black text-soil-900 dark:text-dust-50 sm:text-4xl">
+      <h1 className="mt-2 text-2xl sm:text-3xl font-black text-soil-900 dark:text-dust-50 md:text-4xl">
         {content.about_title.body}
       </h1>
 
@@ -43,7 +43,7 @@ export default function AboutPageView({ content }: { content: ContentMap }) {
           })}
       </div>
 
-      <section className="mt-12 w-full max-w-3xl rounded-pot border border-soil-900/10 bg-white p-8 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:border-dust-50/10 dark:bg-flora-900 dark:shadow-none">
+      <section className="mt-12 w-full max-w-3xl rounded-pot border border-soil-900/10 bg-white p-5 sm:p-8 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:border-dust-50/10 dark:bg-flora-900 dark:shadow-none">
         <h2 className="text-xl font-black text-soil-900 dark:text-dust-50">راه‌های ارتباطی</h2>
         <p className="mt-2 text-sm text-soil-700/70 dark:text-dust-200/70">
           هر سوالی دارید، با کمال میل پاسخ می‌دهیم. برای سفارش عمده، مشاوره انتخاب گلدان یا پیگیری سفارش، در کنارتان هستیم.

@@ -137,15 +137,15 @@ export default function LandingPageView({
 
           {/* Block D: MOBILE STATS - Appears 4th on mobile, hidden on desktop */}
           <div className="order-4 w-full lg:hidden pt-2 mt-6">
-            <dl className="flex items-center gap-6 sm:gap-8 pt-6 border-t border-soil-900/10 dark:border-transparent divide-x divide-x-reverse divide-soil-900/10 dark:divide-transparent justify-center">
+            <dl className="flex items-center gap-2 sm:gap-6 pt-6 border-t border-soil-900/10 dark:border-transparent divide-x divide-x-reverse divide-soil-900/10 dark:divide-transparent justify-center">
               {[
                 { k: '۴۲+', v: 'مدل گلدان' },
                 { k: '۳۱', v: 'استان تحت پوشش' },
                 { k: '۱۲٬۰۰۰+', v: 'سفارش موفق' },
               ].map((s) => (
-                <div key={s.v} className="px-3 sm:px-5 first:ps-0 last:pe-0 text-center">
-                  <dt className="text-2xl sm:text-3xl font-black text-soil-900 dark:text-dust-50">{s.k}</dt>
-                  <dd className="mt-1 text-xs text-soil-700/60 dark:text-dust-300/70">{s.v}</dd>
+                <div key={s.v} className="px-2 sm:px-4 first:ps-0 last:pe-0 text-center">
+                  <dt className="text-xl sm:text-2xl font-black text-soil-900 dark:text-dust-50">{s.k}</dt>
+                  <dd className="mt-1 text-[11px] sm:text-xs text-soil-700/60 dark:text-dust-300/70 whitespace-nowrap">{s.v}</dd>
                 </div>
               ))}
             </dl>
@@ -160,11 +160,15 @@ export default function LandingPageView({
       <Container>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-black text-soil-900 dark:text-dust-50 sm:text-4xl">پرفروش‌ترین‌ها</h2>
-            <p className="mt-3 text-soil-700/80 dark:text-dust-200/80">قیمت پله‌ای — هرچه بیشتر، ارزان‌تر.</p>
+            <h2 className="text-2xl sm:text-3xl font-black text-white md:text-4xl">پرفروش‌ترین‌ها</h2>
+            <p className="mt-3 text-dust-200/80">قیمت پله‌ای — هرچه بیشتر، ارزان‌تر.</p>
           </div>
-          <Link href="/products" className="text-sm font-bold text-flora-700 hover:text-flora-900 dark:text-flora-300 dark:hover:text-flora-100">
-            همه محصولات
+          <Link
+            href="/products"
+            className="group inline-flex items-center gap-1.5 text-sm font-bold text-flora-100 hover:text-white transition-colors"
+          >
+            <span>همه محصولات</span>
+            <span aria-hidden="true" className="transition-transform duration-200 group-hover:-translate-x-0.5">←</span>
           </Link>
         </div>
 
@@ -190,7 +194,7 @@ export default function LandingPageView({
   const trust = (
     <section id="wholesale" className="scroll-mt-24 py-20 lg:py-28">
       <Container>
-        <div className="relative overflow-hidden rounded-pot bg-flora-900 border border-transparent dark:border-dust-100/10 p-10 text-flora-100 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.5)] sm:p-14">
+        <div className="relative overflow-hidden rounded-pot bg-flora-900 border border-transparent dark:border-dust-100/10 p-5 sm:p-10 lg:p-14 text-flora-100 shadow-[0_12px_32px_-12px_rgba(62,39,35,0.22)] dark:shadow-[0_12px_32px_-12px_rgba(0,0,0,0.5)]">
           {ctaImage && (
             <>
               <Image
@@ -216,7 +220,7 @@ export default function LandingPageView({
               <span className="inline-flex items-center gap-1.5 rounded-full border border-flora-300/30 bg-flora-800/60 px-3.5 py-1 text-xs font-bold text-flora-300 backdrop-blur">
                 ✨ بدون نیاز به کد تخفیف
               </span>
-              <h2 className="mt-4 text-3xl font-black text-white sm:text-4xl leading-tight">
+              <h2 className="mt-4 text-2xl sm:text-3xl font-black text-white md:text-4xl leading-tight">
                 {content.promo_title?.body || 'خرید هوشمندانه برای کافه‌ها، دفاتر و خانه‌ها'}
               </h2>
               <p className="mt-4 text-sm sm:text-base leading-8 text-flora-100/90">
@@ -242,8 +246,54 @@ export default function LandingPageView({
 
             {/* Right Column: Generic & Clear Table + B2B Escape Hatch */}
             <div className="lg:col-span-6">
-              <div className="rounded-pot bg-flora-950/70 border border-flora-700/40 dark:border-dust-100/10 p-6 sm:p-8 backdrop-blur shadow-xl">
-                <div className="overflow-x-auto">
+              <div className="rounded-pot bg-flora-950/70 border border-flora-700/40 dark:border-dust-100/10 p-4 sm:p-6 lg:p-8 backdrop-blur shadow-xl">
+                {/* Mobile: Stacked Card Layout */}
+                <div className="flex flex-col gap-3 md:hidden">
+                  <div className="flex flex-col gap-2 rounded-2xl bg-white/5 border border-flora-100/10 p-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-white text-sm">
+                        {toFa('1')} تا {toFa('4')} عدد
+                      </span>
+                      <span className="text-xs font-bold text-flora-100 bg-white/10 px-2.5 py-1 rounded-lg">
+                        قیمت پایه
+                      </span>
+                    </div>
+                    <p className="text-xs text-flora-100/85 leading-5">
+                      مناسب برای خرید شخصی و گیاهان خانگی
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2 rounded-2xl bg-white/5 border border-flora-100/10 p-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-white text-sm">
+                        {toFa('5')} تا {toFa('19')} عدد
+                      </span>
+                      <span className="inline-flex items-center rounded-lg bg-emerald-500/20 px-2.5 py-1 text-xs font-black text-emerald-300 border border-emerald-400/30">
+                        {toFa('15')}٪ تخفیف
+                      </span>
+                    </div>
+                    <p className="text-xs text-flora-100/85 leading-5">
+                      ایده‌آل برای کافه‌ها، رستوران‌های کوچک و دفاتر
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col gap-2 rounded-2xl bg-white/5 border border-flora-100/10 p-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-white text-sm">
+                        {toFa('20')} عدد به بالا
+                      </span>
+                      <span className="inline-flex items-center rounded-lg bg-emerald-500/25 px-2.5 py-1 text-xs font-black text-emerald-200 border border-emerald-400/40">
+                        {toFa('30')}٪ تخفیف
+                      </span>
+                    </div>
+                    <p className="text-xs text-flora-100/85 leading-5">
+                      مناسب برای استارتاپ‌ها و مجموعه‌های در حال رشد
+                    </p>
+                  </div>
+                </div>
+
+                {/* Desktop: Standard Table */}
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-start text-xs sm:text-sm">
                     <caption className="sr-only">جدول تخفیف خودکار و پلکانی بر اساس تعداد سفارش</caption>
                     <thead>
@@ -309,12 +359,12 @@ export default function LandingPageView({
                 <div className="mt-6 pt-5 border-t border-flora-100/15">
                   <Link
                     href="#wholesale-inquiry"
-                    className="group inline-flex w-full items-center justify-between rounded-xl border border-flora-300/35 bg-white/5 hover:bg-white/10 px-4 py-3 text-xs sm:text-sm font-bold text-white transition-all duration-200 hover:border-flora-300 dark:border-dust-50/20 dark:hover:border-flora-300"
+                    className="group inline-flex w-full h-auto items-center justify-between gap-3 rounded-xl border border-flora-300/35 bg-white/5 hover:bg-white/10 px-4 py-4 text-xs sm:text-sm font-bold text-white transition-all duration-200 hover:border-flora-300 dark:border-dust-50/20 dark:hover:border-flora-300 text-center sm:text-start whitespace-normal"
                   >
-                    <span>پروژه بزرگ، هتل یا نیاز سازمانی دارید؟ استعلام اختصاصی B2B</span>
+                    <span className="flex-1 text-center sm:text-start leading-6">پروژه بزرگ، هتل یا نیاز سازمانی دارید؟ استعلام اختصاصی B2B</span>
                     <span
                       aria-hidden="true"
-                      className="transition-transform duration-200 group-hover:-translate-x-1 text-flora-300 font-bold"
+                      className="shrink-0 transition-transform duration-200 group-hover:-translate-x-1 text-flora-300 font-bold"
                     >
                       ←
                     </span>

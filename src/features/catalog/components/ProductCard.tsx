@@ -167,7 +167,7 @@ export default function ProductCard({ product, className = '' }: Props) {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center justify-end gap-1 max-w-[55%]">
             {hasMultipleColors && (
               <span className="rounded-full bg-dust-100 text-soil-700 dark:bg-flora-900 dark:text-dust-300 border border-transparent dark:border-dust-50/10 px-2 py-0.5 text-[10px] font-medium">
                 شامل {toFa(colors.length)} رنگ

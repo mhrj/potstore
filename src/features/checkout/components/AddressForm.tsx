@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Select from '@/components/ui/Select';
 import ProvinceCitySelect from '@/components/ui/ProvinceCitySelect';
 import { FormError } from '@/components/ui/FormError';
 import { IRANIAN_MOBILE_REGEX } from '@/lib/address';
@@ -284,17 +285,17 @@ export default function AddressForm({
           <label htmlFor={`${idPrefix}-label`} className="block text-xs font-bold text-soil-700/80 dark:text-dust-200">
             برچسب آدرس
           </label>
-          <select
+          <Select
             id={`${idPrefix}-label`}
             name="label"
             value={form.label}
             onChange={handleChange}
-            className="mt-1 w-full rounded-xl border border-soil-900/10 dark:border-dust-50/20 bg-dust-50 dark:bg-flora-950 px-3 py-2.5 text-sm text-soil-900 dark:text-dust-50 outline-none transition focus:border-flora-500 focus:dark:border-flora-500"
+            containerClassName="mt-1"
           >
-            <option value="HOME" className="dark:bg-flora-950 dark:text-dust-50">خانه</option>
-            <option value="WORK" className="dark:bg-flora-950 dark:text-dust-50">محل کار</option>
-            <option value="OTHER" className="dark:bg-flora-950 dark:text-dust-50">سایر</option>
-          </select>
+            <option value="HOME">خانه</option>
+            <option value="WORK">محل کار</option>
+            <option value="OTHER">سایر</option>
+          </Select>
         </div>
       </div>
 
