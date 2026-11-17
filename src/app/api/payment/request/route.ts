@@ -286,9 +286,16 @@ export async function POST(req: Request) {
                 (l.variantId ? ai.variantId === l.variantId : true),
             );
           const isBundle = (l.bundleSize ?? 1) > 1;
-          const rawColorData = (l.colorData ?? cartItem?.colorData ?? null) as Record<string, unknown> | null;
+          const cartItemColorData =
+            typeof cartItem?.colorData === 'object' && cartItem?.colorData !== null
+              ? (cartItem.colorData as Record<string, unknown>)
+              : null;
+          const rawColorData = (l.colorData ?? cartItemColorData ?? null) as Record<string, unknown> | null;
 
-          let itemColorData: Record<string, unknown> | null = rawColorData;
+          let itemColorData: Record<string, unknown> | null = {
+            ...(cartItemColorData || {}),
+            ...(rawColorData || {}),
+          };
           if (cartItem?.colorAdjustment) {
             itemColorData = {
               ...(itemColorData || {}),

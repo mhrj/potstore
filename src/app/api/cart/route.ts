@@ -19,6 +19,7 @@ const addSchema = z
     color: z.union([z.string(), colorOptionSchema]).optional().nullable(),
     selectedColor: colorOptionSchema.optional().nullable(),
     bundleColors: z.record(z.string(), z.unknown()).optional().nullable(),
+    bundleSelections: z.array(z.unknown()).optional().nullable(),
     colorAdjustment: z.coerce.number().int().optional(),
   })
   .strict();
@@ -64,8 +65,11 @@ export async function POST(req: Request) {
       };
     } else if (colorHex) {
       colorData = { color: colorHex };
-    } else if (parsed.data.bundleColors) {
-      colorData = { bundleColors: parsed.data.bundleColors };
+    } else if (parsed.data.bundleColors || parsed.data.bundleSelections) {
+      colorData = {
+        ...(parsed.data.bundleColors ? { bundleColors: parsed.data.bundleColors } : {}),
+        ...(parsed.data.bundleSelections ? { bundleSelections: parsed.data.bundleSelections } : {}),
+      };
     }
 
     await addToCart(

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { priceCart, type CartTotals, type Tier } from '@/lib/pricing';
 import { parseBundleItems, parseColorOptions } from '@/lib/product-features';
 import { toFa } from '@/lib/format';
+import { parseBundleSelections, mergeBundleSelections } from '@/lib/bundle-colors';
 
 export function getStockShortages(
   items: Array<{ name: string; quantity: number; stock: number }>,
@@ -229,9 +230,57 @@ export async function addToCart(
     finalAdjustment = clientColorAdjustment;
   }
 
-  const jsonColorData = (colorData as Prisma.InputJsonValue) ?? Prisma.JsonNull;
+  let jsonColorData: Prisma.InputJsonValue = (colorData as Prisma.InputJsonValue) ?? Prisma.JsonNull;
+
+  if (isBundle && colorData) {
+    const selections = parseBundleSelections(
+      colorData,
+      quantity,
+      bundleSize,
+      product.bundleItems,
+    );
+    if (selections.length > 0) {
+      jsonColorData = {
+        ...(typeof colorData === 'object' && colorData !== null ? colorData : {}),
+        bundleSelections: selections,
+      } as Prisma.InputJsonValue;
+    }
+  }
 
   if (existing) {
+    let finalColorDataToSave = jsonColorData;
+
+    if (isBundle) {
+      const existingSelections = parseBundleSelections(
+        existing.colorData,
+        existing.quantity,
+        bundleSize,
+        product.bundleItems,
+      );
+      const incomingBundleCount = Math.max(1, Math.floor(quantity / bundleSize));
+      const incomingRaw =
+        (colorData as Record<string, unknown>)?.bundleSelections ||
+        (colorData as Record<string, unknown>)?.bundleColors ||
+        colorData;
+
+      const mergedSelections = mergeBundleSelections(
+        existingSelections,
+        incomingRaw,
+        incomingBundleCount,
+      );
+
+      const existingObj =
+        typeof existing.colorData === 'object' && existing.colorData !== null
+          ? (existing.colorData as Record<string, unknown>)
+          : {};
+
+      finalColorDataToSave = {
+        ...existingObj,
+        ...(typeof colorData === 'object' && colorData !== null ? colorData : {}),
+        bundleSelections: mergedSelections,
+      } as Prisma.InputJsonValue;
+    }
+
     return prisma.cartItem.update({
       where: { id: existing.id },
       data: {
@@ -239,7 +288,7 @@ export async function addToCart(
         selectedColorHex: finalColorHex,
         colorAdjustment: finalAdjustment,
         variantTitle: chosenVariant?.title ?? existing.variantTitle,
-        ...(colorData !== undefined ? { colorData: jsonColorData } : {}),
+        colorData: finalColorDataToSave,
       },
     });
   }

@@ -23,6 +23,7 @@ type DashboardOrder = {
 };
 
 import type { AddressRecord } from '@/features/checkout/components/AddressForm';
+import type { TapinProvince } from '@/lib/providers/shipping/tapin/locations';
 
 type DashboardViewProps = {
   user: {
@@ -31,9 +32,12 @@ type DashboardViewProps = {
   };
   orders: DashboardOrder[];
   addresses: AddressRecord[];
+  locations?: TapinProvince[];
+  provinces?: TapinProvince[];
 };
 
-export default function DashboardView({ user, orders, addresses }: DashboardViewProps) {
+export default function DashboardView({ user, orders, addresses, locations, provinces }: DashboardViewProps) {
+  const locList = locations && locations.length > 0 ? locations : (provinces || []);
   return (
     <Container className="py-12">
       <header className="flex flex-wrap items-center justify-between gap-4">
@@ -186,7 +190,7 @@ export default function DashboardView({ user, orders, addresses }: DashboardView
           آدرس پیش‌فرض هنگام تسویه‌حساب به‌صورت خودکار انتخاب می‌شود.
         </p>
         <div className="mt-5">
-          <AddressBook initial={addresses} />
+          <AddressBook initial={addresses} locations={locList} provinces={locList} />
         </div>
       </section>
     </Container>

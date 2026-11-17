@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AddressForm, { type AddressRecord } from "@/features/checkout/components/AddressForm";
+import type { TapinProvince } from "@/lib/providers/shipping/tapin/locations";
 import { calcShippingToman, type CartTotals } from "@/lib/pricing";
 import { formatToman, formatWeight, toFa } from "@/lib/format";
 import { numberToWordsFa } from "@/lib/number-to-words";
@@ -52,11 +53,16 @@ export default function CheckoutForm({
   addresses,
   totals,
   initialShippingRates = {},
+  locations,
+  provinces,
 }: {
   addresses: Address[];
   totals: CartTotals;
   initialShippingRates?: Record<string, number>;
+  locations?: TapinProvince[];
+  provinces?: TapinProvince[];
 }) {
+  const locList = locations && locations.length > 0 ? locations : (provinces || []);
   const [addressList, setAddressList] = useState<Address[]>(addresses);
   const [selectedId, setSelectedId] = useState<string>(
     addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? "",
@@ -221,7 +227,7 @@ export default function CheckoutForm({
   if (addressList.length === 0) {
     return (
       <div className="space-y-4">
-        <AddressForm idPrefix="checkout-first-address" onSaved={handleCreated} />
+        <AddressForm idPrefix="checkout-first-address" onSaved={handleCreated} locations={locList} />
       </div>
     );
   }
@@ -235,12 +241,14 @@ export default function CheckoutForm({
             address={currentAddress}
             onSaved={handleAddressUpdated}
             onCancel={() => setEditingAddressId(null)}
+            locations={locList}
           />
         ) : showForm ? (
           <AddressForm
             idPrefix="checkout-add-address"
             onSaved={handleCreated}
             onCancel={() => setShowForm(false)}
+            locations={locList}
           />
         ) : (
           <fieldset className="rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-5">

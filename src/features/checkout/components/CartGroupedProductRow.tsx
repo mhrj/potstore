@@ -10,6 +10,7 @@ import { numberToWordsFa } from '@/lib/number-to-words';
 import type { PricedLine } from '@/lib/pricing';
 import { ItemColorBadge } from '@/features/catalog';
 import ConfirmModal from '@/components/ui/ConfirmModal';
+import OrderItemCard from '@/components/ui/OrderItemCard';
 import { extractColorName, formatSpecs, formatBundleBreakdown } from './OrderItemDetails';
 
 type CartGroupedProductRowProps = {
@@ -94,120 +95,32 @@ function VariantSubRow({
     });
   };
 
-  const colorName = extractColorName(line);
   const isBundle = line.bundleSize > 1;
-  const displayQty = isBundle ? Math.round(qty / line.bundleSize) : qty;
-  const unitLabel = isBundle ? 'بسته' : 'عدد';
 
-  const labelParts: string[] = [];
-  if (colorName) labelParts.push(`رنگ ${colorName}`);
-  if (line.variantTitle) labelParts.push(line.variantTitle);
-  const variantLabel = labelParts.length > 0 ? labelParts.join(' - ') : 'مدل استاندارد';
-
-  const bundleBreakdown = isBundle && line.bundleItems ? formatBundleBreakdown(line.bundleItems) : null;
+  let nextTierHintText: string | null = null;
+  if (line.nextTier) {
+    nextTierHintText = isBundle
+      ? `${toFa(Math.max(1, line.nextTier.minQuantity - Math.round(qty / line.bundleSize)))} بسته دیگر → هر بسته ${formatToman(line.nextTier.unitPriceToman)} تومان`
+      : `${toFa(Math.max(1, line.nextTier.minQuantity - qty))} عدد دیگر → هر عدد ${formatToman(line.nextTier.unitPriceToman)} تومان`;
+  }
 
   return (
-    <div className="py-3 text-xs space-y-2 border-b border-soil-900/5 dark:border-dust-50/5 last:border-b-0">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="size-2 rounded-full bg-flora-600 dark:bg-flora-400 shrink-0" />
-          <span className="font-bold text-soil-900 dark:text-dust-50 text-sm">
-            {variantLabel}:
-          </span>
-          <span className="font-semibold text-soil-800 dark:text-dust-200">
-            {toFa(displayQty)} {unitLabel}
-          </span>
-          <ItemColorBadge colorData={line.colorData} />
-          {line.colorAdjustment !== 0 && (
-            <span className="text-[11px] font-bold text-flora-700 dark:text-flora-400 bg-flora-50 dark:bg-flora-950/60 px-2 py-0.5 rounded-md border border-flora-500/20">
-              (تغییر قیمت رنگ: {line.colorAdjustment > 0 ? '+' : ''}{toFa(formatToman(line.colorAdjustment))} تومان)
-            </span>
-          )}
-          {line.tierLabel && (
-            <span className="rounded bg-flora-50 dark:bg-flora-950 px-1.5 py-0.5 text-[10px] text-flora-700 dark:text-flora-300 border border-flora-300/40 dark:border-flora-700">
-              سطح: {line.tierLabel}
-            </span>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setIsConfirmOpen(true)}
-          disabled={pending}
-          aria-label="حذف این مورد از سبد"
-          className="rounded-full p-1.5 text-soil-700/60 dark:text-dust-200/60 transition hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-40 cursor-pointer"
-        >
-          <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
-          </svg>
-        </button>
-      </div>
-
-      {bundleBreakdown && (
-        <p className="text-[11px] text-flora-800 dark:text-flora-300 font-medium bg-flora-50/70 dark:bg-flora-950/50 px-2 py-0.5 rounded-lg border border-flora-200/60 dark:border-flora-800/40">
-          {bundleBreakdown}
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        {/* Quantity Stepper */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-full border border-soil-900/10 dark:border-dust-50/20 dark:bg-flora-950 p-0.5">
-            <button
-              type="button"
-              onClick={() => update(qty - line.bundleSize)}
-              disabled={pending || qty <= line.bundleSize}
-              aria-label="کاهش تعداد"
-              className="grid size-7 place-items-center rounded-full text-sm font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 disabled:opacity-35"
-            >
-              −
-            </button>
-            <span className="w-7 text-center text-xs font-black text-soil-900 dark:text-dust-50">{toFa(qty)}</span>
-            <button
-              type="button"
-              onClick={() => update(qty + line.bundleSize)}
-              disabled={pending || qty + line.bundleSize > stock}
-              aria-label="افزایش تعداد"
-              className="grid size-7 place-items-center rounded-full text-sm font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 disabled:opacity-35"
-            >
-              +
-            </button>
-          </div>
-          <span className="text-[11px] text-soil-700/80 dark:text-dust-200/80">
-            {toFa(qty)} عدد {isBundle && `(معادل ${toFa(qty / line.bundleSize)} بسته)`}
-          </span>
-        </div>
-
-        {/* Subtotal */}
-        <div className="text-end">
-          <p className="text-xs font-black text-flora-900 dark:text-flora-300">
-            ({formatToman(line.lineTotalToman)} تومان)
-          </p>
-        </div>
-      </div>
-
-      {line.nextTier && (
-        <p className="text-[11px] text-dust-500 dark:text-dust-400">
-          {isBundle ? (
-            <>
-              {toFa(Math.max(1, line.nextTier.minQuantity - Math.round(qty / line.bundleSize)))} بسته دیگر → هر بسته{' '}
-              {formatToman(line.nextTier.unitPriceToman)}
-            </>
-          ) : (
-            <>
-              {toFa(Math.max(1, line.nextTier.minQuantity - qty))} عدد دیگر → هر عدد{' '}
-              {formatToman(line.nextTier.unitPriceToman)}
-            </>
-          )}
-        </p>
-      )}
-
+    <div className="py-2 border-b border-soil-900/5 dark:border-dust-50/5 last:border-b-0">
+      <OrderItemCard
+        item={{ ...line, quantity: qty }}
+        isCart={true}
+        stock={stock}
+        isPending={pending}
+        showImage={false}
+        onUpdateQuantity={(next) => update(next)}
+        onRemove={() => setIsConfirmOpen(true)}
+        nextTierHintText={nextTierHintText}
+      />
       {error && (
-        <p role="alert" className="text-[11px] font-bold text-red-600 dark:text-red-400">
+        <p role="alert" className="text-[11px] font-bold text-red-600 dark:text-red-400 mt-1">
           {error}
         </p>
       )}
-
       <ConfirmModal
         isOpen={isConfirmOpen}
         title="حذف از سبد خرید"

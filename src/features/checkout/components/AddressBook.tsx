@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import AddressForm, { type AddressRecord } from '@/features/checkout/components/AddressForm';
+import type { TapinProvince } from '@/lib/providers/shipping/tapin/locations';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 
 const LABEL_TEXT: Record<AddressRecord['label'], string> = {
@@ -18,7 +19,16 @@ const LABEL_TEXT: Record<AddressRecord['label'], string> = {
  * address, and the survivor after deleting the default, are both forced
  * default server-side) without a full page reload.
  */
-export default function AddressBook({ initial }: { initial: AddressRecord[] }) {
+export default function AddressBook({
+  initial,
+  locations,
+  provinces,
+}: {
+  initial: AddressRecord[];
+  locations?: TapinProvince[];
+  provinces?: TapinProvince[];
+}) {
+  const locList = locations && locations.length > 0 ? locations : (provinces || []);
   const [addresses, setAddresses] = useState<AddressRecord[]>(initial);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(initial.length === 0);
@@ -111,6 +121,8 @@ export default function AddressBook({ initial }: { initial: AddressRecord[] }) {
                 address={a}
                 onSaved={upsert}
                 onCancel={() => setEditingId(null)}
+                locations={locList}
+                provinces={locList}
               />
             </li>
           ) : (
@@ -174,7 +186,13 @@ export default function AddressBook({ initial }: { initial: AddressRecord[] }) {
       </ul>
 
       {adding ? (
-        <AddressForm idPrefix="address-book-add" onSaved={upsert} onCancel={addresses.length > 0 ? () => setAdding(false) : undefined} />
+        <AddressForm
+          idPrefix="address-book-add"
+          onSaved={upsert}
+          onCancel={addresses.length > 0 ? () => setAdding(false) : undefined}
+          locations={locList}
+          provinces={locList}
+        />
       ) : (
         <button
           type="button"

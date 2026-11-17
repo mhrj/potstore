@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { fetchTapinLocations } from "@/lib/providers/shipping/tapin/locations";
 import { DashboardView } from "@/features/checkout";
 
 export default async function DashboardPage() {
   const user = await requireUser();
 
-  const [orders, addresses] = await Promise.all([
+  const [orders, addresses, locations] = await Promise.all([
     prisma.order.findMany({
       where: { userId: user.id },
       select: {
@@ -54,13 +55,21 @@ export default async function DashboardPage() {
       },
       orderBy: { isDefault: "desc" },
     }),
+    fetchTapinLocations().catch((err) => {
+      console.error('Failed to fetch Tapin locations in DashboardPage:', err);
+      return [];
+    }),
   ]);
+
+  console.log('TAPIN DATA FETCHED:', locations.length);
 
   return (
     <DashboardView
       user={{ id: user.id, fullName: user.fullName }}
       orders={orders}
       addresses={addresses}
+      locations={locations}
+      provinces={locations}
     />
   );
 }

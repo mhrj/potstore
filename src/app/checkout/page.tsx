@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getCartTotals } from '@/lib/cart';
 import { calculateShippingCost, resolveCityCode } from '@/lib/postex';
 import { calcShippingToman } from '@/lib/pricing';
+import { fetchTapinLocations } from '@/lib/providers/shipping/tapin/locations';
 import Container from '@/components/ui/Container';
 import { CheckoutForm } from '@/features/checkout';
 import { redirect } from 'next/navigation';
@@ -10,13 +11,19 @@ import { redirect } from 'next/navigation';
 export default async function CheckoutPage() {
   const user = await requireUser();
 
-  const [addresses, totals] = await Promise.all([
+  const [addresses, totals, locations] = await Promise.all([
     prisma.address.findMany({
       where: { userId: user.id },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
     }),
     getCartTotals(user.id),
+    fetchTapinLocations().catch((err) => {
+      console.error('Failed to fetch Tapin locations in CheckoutPage:', err);
+      return [];
+    }),
   ]);
+
+  console.log('TAPIN DATA FETCHED:', locations.length);
 
   if (totals.lines.length === 0) {
     redirect('/cart');
@@ -76,6 +83,8 @@ export default async function CheckoutPage() {
           }))}
           totals={totals}
           initialShippingRates={initialShippingRates}
+          locations={locations}
+          provinces={locations}
         />
       </div>
     </Container>

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useMemo } from 'react';
 import Select from '@/components/ui/Select';
-import ProvinceCitySelect from '@/components/ui/ProvinceCitySelect';
+import SearchableCombobox, { type ComboboxOption } from '@/components/ui/SearchableCombobox';
+import type { TapinProvince } from '@/lib/providers/shipping/tapin/locations';
 import { FormError } from '@/components/ui/FormError';
 import { IRANIAN_MOBILE_REGEX } from '@/lib/address';
 import { saveAddressAction } from '@/features/checkout/actions/address-actions';
@@ -14,6 +15,8 @@ export type AddressRecord = {
   phone: string;
   province: string;
   city: string;
+  provinceCode?: number | string;
+  cityCode?: number | string;
   postalCode: string;
   line1: string;
   line2: string | null;
@@ -21,11 +24,13 @@ export type AddressRecord = {
 };
 
 const EMPTY_FORM = {
-  label: 'HOME',
+  label: 'HOME' as 'HOME' | 'WORK' | 'OTHER',
   fullName: '',
   phone: '',
-  province: 'تهران',
-  city: 'تهران',
+  province: '',
+  city: '',
+  provinceCode: undefined as number | string | undefined,
+  cityCode: undefined as number | string | undefined,
   postalCode: '',
   line1: '',
   line2: '',
@@ -42,6 +47,8 @@ function toFormState(address?: AddressRecord): FormState {
     phone: address.phone,
     province: address.province,
     city: address.city,
+    provinceCode: address.provinceCode,
+    cityCode: address.cityCode,
     postalCode: address.postalCode,
     line1: address.line1,
     line2: address.line2 ?? '',
@@ -68,19 +75,29 @@ export function toDigitsOnly(value: string): string {
 }
 
 /**
- * Create/edit form for a shipping address.
+ * Create/edit form for a shipping address using live Tapin locations.
  */
 export default function AddressForm({
   address,
   onSaved,
   onCancel,
   idPrefix = 'address',
+  locations = [],
+  provinces,
 }: {
   address?: AddressRecord;
   onSaved: (address: AddressRecord) => void;
   onCancel?: () => void;
   idPrefix?: string;
+  locations?: TapinProvince[];
+  provinces?: TapinProvince[];
 }) {
+  const locList = useMemo(() => {
+    if (locations && locations.length > 0) return locations;
+    if (provinces && provinces.length > 0) return provinces;
+    return [];
+  }, [locations, provinces]);
+
   const editing = Boolean(address);
   const [form, setForm] = useState<FormState>(() => toFormState(address));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -88,8 +105,80 @@ export default function AddressForm({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  // Resolve active province object (by provinceCode or by matching title for edit flow)
+  const selectedProvince = useMemo(() => {
+    if (form.provinceCode !== undefined && form.provinceCode !== null && form.provinceCode !== '') {
+      const match = locList.find((l) => String(l.code) === String(form.provinceCode));
+      if (match) return match;
+    }
+    if (form.province) {
+      const match = locList.find((l) => l.title === form.province);
+      if (match) return match;
+    }
+    return null;
+  }, [locList, form.provinceCode, form.province]);
+
+  // Province options for SearchableCombobox
+  const provinceOptions: ComboboxOption[] = useMemo(() => {
+    return locList.map((l) => ({
+      value: l.code,
+      label: l.title,
+    }));
+  }, [locList]);
+
+  // City options filtered based on selected province
+  const cityOptions: ComboboxOption[] = useMemo(() => {
+    if (!selectedProvince) return [];
+    const opts: ComboboxOption[] = selectedProvince.cities.map((c) => ({
+      value: c.code,
+      label: c.title,
+    }));
+    // If editing legacy address whose city is not present in Tapin city tree, keep it as an option
+    if (form.city && !opts.some((o) => o.label === form.city)) {
+      opts.push({
+        value: form.city,
+        label: form.city,
+      });
+    }
+    return opts;
+  }, [selectedProvince, form.city]);
+
+  const handleProvinceChange = (val: string | number, opt: ComboboxOption) => {
+    const code = Number(val);
+    const prov = locList.find((l) => l.code === code) || { code, title: opt.label };
+    setForm((current) => ({
+      ...current,
+      province: prov.title,
+      provinceCode: prov.code,
+      city: '',
+      cityCode: undefined,
+    }));
+    if (errors.province) {
+      setErrors((prev) => ({ ...prev, province: '' }));
+    }
+    if (errors.city) {
+      setErrors((prev) => ({ ...prev, city: '' }));
+    }
+  };
+
+  const handleCityChange = (val: string | number, opt: ComboboxOption) => {
+    const code = Number(val);
+    const c = selectedProvince?.cities.find((city) => city.code === code) || {
+      code: isNaN(code) ? 0 : code,
+      title: opt.label,
+    };
+    setForm((current) => ({
+      ...current,
+      city: c.title,
+      cityCode: c.code,
+    }));
+    if (errors.city) {
+      setErrors((prev) => ({ ...prev, city: '' }));
+    }
+  };
+
   const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     const target = event.target as HTMLInputElement;
     const name = target.name;
@@ -112,17 +201,24 @@ export default function AddressForm({
     }
 
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({
+        ...prev,
+        [name]: '',
+      }));
     }
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     setError(null);
 
     let hasPhoneError = false;
-    if (!form.phone.trim() || !IRANIAN_MOBILE_REGEX.test(form.phone.trim())) {
-      setPhoneError('شماره موبایل وارد شده معتبر نیست');
+    const cleanPhone = toDigitsOnly(form.phone);
+    if (!cleanPhone) {
+      setPhoneError('شماره همراه الزامی است');
+      hasPhoneError = true;
+    } else if (!IRANIAN_MOBILE_REGEX.test(cleanPhone)) {
+      setPhoneError('شماره همراه معتبر نیست (مثال: 09121234567)');
       hasPhoneError = true;
     } else {
       setPhoneError(null);
@@ -178,18 +274,45 @@ export default function AddressForm({
     <form
       noValidate
       onSubmit={handleSubmit}
-      className="space-y-4 rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-5"
+      className="space-y-4 rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-5 shadow-xs"
     >
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-black text-soil-900 dark:text-dust-50">
+      <div className="flex items-center justify-between border-b border-soil-900/10 dark:border-dust-50/10 pb-3">
+        <h3 className="font-bold text-soil-900 dark:text-dust-50 text-sm">
           {editing ? 'ویرایش آدرس' : 'افزودن آدرس جدید'}
         </h3>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-xs text-soil-700/70 hover:text-soil-900 dark:text-dust-200/70 dark:hover:text-dust-50"
+          >
+            انصراف
+          </button>
+        )}
       </div>
+
+      {error && (
+        <div
+          role="alert"
+          className="rounded-xl border border-red-500/30 bg-red-50 dark:bg-red-950/40 p-3 text-xs text-red-600 dark:text-red-400"
+        >
+          {error}
+        </div>
+      )}
+
+      {locList.length === 0 && (
+        <div
+          role="status"
+          className="rounded-xl border border-amber-300/40 bg-amber-50 dark:bg-amber-950/40 p-3 text-xs text-amber-800 dark:text-amber-300"
+        >
+          در حال بارگذاری یا عدم دسترسی به سامانه تپین برای دریافت استان‌ها و شهرها...
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="block">
           <label htmlFor={`${idPrefix}-fullName`} className="block text-xs font-bold text-soil-700/80 dark:text-dust-200">
-            نام و نام خانوادگی
+            نام و نام خانوادگی تحویل‌گیرنده
             <span className="text-red-500 ms-0.5">*</span>
           </label>
           <input
@@ -231,31 +354,45 @@ export default function AddressForm({
           {phoneError && <p className="mt-1 text-xs font-bold text-red-600 dark:text-red-400">{phoneError}</p>}
         </div>
 
-        <div className="sm:col-span-2">
-          <ProvinceCitySelect
-            idPrefix={`${idPrefix}-region`}
-            value={{ province: form.province, city: form.city }}
-            onChange={(val) => {
-              setForm((current) => ({
-                ...current,
-                province: val.province,
-                city: val.city,
-              }));
-              if (errors.province && val.province) {
-                setErrors((prev) => ({ ...prev, province: '' }));
-              }
-              if (errors.city && val.city) {
-                setErrors((prev) => ({ ...prev, city: '' }));
-              }
-            }}
-            required
-            provinceLabel="استان"
-            cityLabel="شهر"
-            provincePlaceholder="انتخاب استان"
-            cityPlaceholder="انتخاب شهر"
-            errorProvince={errors.province}
-            errorCity={errors.city}
-          />
+        {/* Province and City Searchable Comboboxes */}
+        <div className="sm:col-span-2 grid gap-4 sm:grid-cols-2" dir="rtl">
+          <div className="block">
+            <label htmlFor={`${idPrefix}-province`} className="block text-xs font-bold text-soil-700/80 dark:text-dust-200 mb-1">
+              استان
+              <span className="text-red-500 ms-0.5">*</span>
+            </label>
+            <SearchableCombobox
+              id={`${idPrefix}-province`}
+              name="provinceCode"
+              options={provinceOptions}
+              value={selectedProvince?.code ?? form.province}
+              onChange={handleProvinceChange}
+              placeholder="جستجو و انتخاب استان…"
+              disabled={locList.length === 0}
+              error={Boolean(errors.province)}
+              emptyMessage="استانی با این نام پیدا نشد"
+            />
+            <FormError message={errors.province} />
+          </div>
+
+          <div className="block">
+            <label htmlFor={`${idPrefix}-city`} className="block text-xs font-bold text-soil-700/80 dark:text-dust-200 mb-1">
+              شهر
+              <span className="text-red-500 ms-0.5">*</span>
+            </label>
+            <SearchableCombobox
+              id={`${idPrefix}-city`}
+              name="cityCode"
+              options={cityOptions}
+              value={form.cityCode ?? form.city}
+              onChange={handleCityChange}
+              placeholder={selectedProvince ? 'جستجو و انتخاب شهر…' : 'ابتدا استان را انتخاب کنید'}
+              disabled={!selectedProvince || cityOptions.length === 0}
+              error={Boolean(errors.city)}
+              emptyMessage="شهری با این نام پیدا نشد"
+            />
+            <FormError message={errors.city} />
+          </div>
         </div>
 
         <div className="block">
@@ -304,24 +441,25 @@ export default function AddressForm({
           آدرس دقیق
           <span className="text-red-500 ms-0.5">*</span>
         </label>
-        <input
+        <textarea
           id={`${idPrefix}-line1`}
           name="line1"
           value={form.line1}
           onChange={handleChange}
-          className={`mt-1 w-full rounded-xl border bg-dust-50 dark:bg-flora-950 px-3 py-2.5 text-sm text-soil-900 dark:text-dust-50 dark:placeholder:text-dust-400 outline-none transition ${
+          rows={2}
+          className={`mt-1 w-full rounded-xl border bg-dust-50 dark:bg-flora-950 px-3 py-2.5 text-sm text-soil-900 dark:text-dust-50 dark:placeholder:text-dust-400 outline-none transition resize-none ${
             errors.line1
               ? 'border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-500/20'
               : 'border-soil-900/10 dark:border-dust-50/20 focus:border-flora-500 focus:dark:border-flora-500'
           }`}
-          placeholder="خیابان ولیعصر، کوچه ..."
+          placeholder="خیابان، کوچه، پلاک، زنگ، واحد..."
         />
         <FormError message={errors.line1} />
       </div>
 
       <div className="block">
         <label htmlFor={`${idPrefix}-line2`} className="block text-xs font-bold text-soil-700/80 dark:text-dust-200">
-          واحد / پلاک / توضیحات بیشتر
+          توضیحات تکمیلی (اختیاری)
         </label>
         <input
           id={`${idPrefix}-line2`}
@@ -329,50 +467,43 @@ export default function AddressForm({
           value={form.line2}
           onChange={handleChange}
           className="mt-1 w-full rounded-xl border border-soil-900/10 dark:border-dust-50/20 bg-dust-50 dark:bg-flora-950 px-3 py-2.5 text-sm text-soil-900 dark:text-dust-50 dark:placeholder:text-dust-400 outline-none transition focus:border-flora-500 focus:dark:border-flora-500"
-          placeholder="پلاک ۱۲، طبقه ۳"
+          placeholder="طبقه، زنگ، یا راهنمای دسترسی برای پیک..."
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pt-1">
         <input
-          id={`${idPrefix}-isDefault`}
           type="checkbox"
+          id={`${idPrefix}-isDefault`}
           name="isDefault"
           checked={form.isDefault}
           onChange={handleChange}
-          className="h-4 w-4 accent-flora-700"
+          className="size-4 rounded-md border-soil-900/20 text-flora-700 focus:ring-flora-500 accent-flora-700"
         />
-        <label htmlFor={`${idPrefix}-isDefault`} className="text-xs font-bold text-soil-700/80 dark:text-dust-200 cursor-pointer">
-          این آدرس پیش‌فرض باشد
+        <label htmlFor={`${idPrefix}-isDefault`} className="text-xs font-bold text-soil-700/90 dark:text-dust-200">
+          به‌عنوان آدرس پیش‌فرض ذخیره شود
         </label>
       </div>
 
-      {error && (
-        <p role="alert" className="rounded-xl bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800/40 px-3 py-2 text-xs font-bold text-red-700 dark:text-red-300">
-          {error}
-        </p>
-      )}
-
-      <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="flex-1 rounded-2xl bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-3 text-sm font-black transition-colors hover:bg-flora-700 disabled:opacity-60 cursor-pointer"
-        >
-          {isPending ? 'در حال ذخیره…' : editing ? 'ثبت تغییرات' : 'ذخیره آدرس'}
-        </button>
-        {editing && onCancel && (
+      <div className="flex justify-end gap-2 pt-2 border-t border-soil-900/10 dark:border-dust-50/10">
+        {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-2xl border border-soil-900/10 dark:border-dust-50/20 px-6 py-3 text-sm font-bold text-soil-900 dark:text-dust-50 transition-colors hover:bg-dust-50 dark:hover:bg-flora-950"
+            disabled={isPending}
+            className="rounded-xl border border-soil-900/15 px-4 py-2.5 text-xs font-bold text-soil-800 transition hover:bg-dust-100 disabled:opacity-50 dark:border-dust-50/20 dark:text-dust-200 dark:hover:bg-flora-800"
           >
             انصراف
           </button>
         )}
+        <button
+          type="submit"
+          disabled={isPending}
+          className="rounded-xl bg-flora-700 px-6 py-2.5 text-xs font-bold text-dust-50 shadow-sm transition hover:bg-flora-800 disabled:opacity-50"
+        >
+          {isPending ? 'در حال ثبت…' : editing ? 'ویرایش آدرس' : 'ثبت آدرس'}
+        </button>
       </div>
-
-
     </form>
   );
 }

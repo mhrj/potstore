@@ -3,6 +3,7 @@ import { formatToman, toFa } from '@/lib/format';
 import { ItemColorBadge, resolveColorName } from '@/features/catalog';
 import BundleDetailsAccordion from './BundleDetailsAccordion';
 import { parseBundleItems } from '@/lib/product-features';
+import OrderItemCard from '@/components/ui/OrderItemCard';
 
 export type OrderItemDetailsItem = {
   id?: string;
@@ -155,6 +156,24 @@ export function formatBundleBreakdown(itemsList: Array<{ title: string; quantity
 }
 
 export default function OrderItemDetails({
+  item,
+  compact = false,
+  className = '',
+  showImage = true,
+  linkTargetBlank = false,
+}: Props) {
+  return (
+    <OrderItemCard
+      item={item}
+      compact={compact}
+      className={className}
+      showImage={showImage}
+      linkTargetBlank={linkTargetBlank}
+    />
+  );
+}
+
+function LegacyOrderItemDetails({
   item,
   compact = false,
   className = '',
@@ -570,33 +589,17 @@ export function OrderItemGroup({
             )}
 
             {/* Sub-rows for variants */}
-            <ul className="space-y-1.5 mt-1 ps-2 border-s-2 border-flora-500/30 dark:border-flora-400/20">
-              {group.items.map((subItem, idx) => {
-                const colorName = extractColorName(subItem);
-                const bundleSize = subItem.bundleSize && subItem.bundleSize > 1 ? subItem.bundleSize : 1;
-                const isBundle = subItem.isBundle ?? bundleSize > 1;
-                const displayQty = isBundle ? Math.round(subItem.quantity / bundleSize) : subItem.quantity;
-                const unitLabel = isBundle ? 'بسته' : 'عدد';
-
-                const labelParts: string[] = [];
-                if (colorName) labelParts.push(`رنگ ${colorName}`);
-                if (subItem.variantTitle) labelParts.push(subItem.variantTitle);
-                const variantLabel = labelParts.length > 0 ? labelParts.join(' - ') : 'مدل استاندارد';
-
-                return (
-                  <li key={subItem.id ?? idx} className="flex items-center justify-between text-[11px] gap-2">
-                    <span className="flex items-center gap-1.5 text-soil-800 dark:text-dust-200">
-                      <ItemColorBadge colorData={subItem.colorData ?? (subItem.selectedColorHex ? { selectedColorHex: subItem.selectedColorHex } : undefined)} />
-                      <span>{variantLabel}:</span>
-                      <span className="font-bold">{toFa(displayQty)} {unitLabel}</span>
-                    </span>
-                    <span className="font-semibold text-soil-900 dark:text-dust-100">
-                      ({formatToman(subItem.lineTotalToman)} تومان)
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="space-y-1.5 mt-1 ps-2 border-s-2 border-flora-500/30 dark:border-flora-400/20">
+              {group.items.map((subItem, idx) => (
+                <OrderItemCard
+                  key={subItem.id ?? idx}
+                  item={subItem}
+                  compact={true}
+                  showImage={false}
+                  linkTargetBlank={linkTargetBlank}
+                />
+              ))}
+            </div>
 
             {/* Group total */}
             <div className="pt-1.5 text-[11px] flex justify-between font-bold text-soil-900 dark:text-dust-50 border-t border-soil-900/5 dark:border-dust-50/10">
@@ -683,56 +686,14 @@ export function OrderItemGroup({
 
           {/* Sub-rows for each variant */}
           <div className="rounded-xl bg-dust-50/80 dark:bg-flora-950/40 border border-soil-900/5 dark:border-dust-50/5 p-3 space-y-2 print:p-1 print:bg-transparent print:border-none print:space-y-1">
-            {group.items.map((subItem, idx) => {
-              const colorName = extractColorName(subItem);
-              const bundleSize = subItem.bundleSize && subItem.bundleSize > 1 ? subItem.bundleSize : 1;
-              const isBundle = subItem.isBundle ?? bundleSize > 1;
-              const displayQty = isBundle ? Math.round(subItem.quantity / bundleSize) : subItem.quantity;
-              const unitLabel = isBundle ? 'بسته' : 'عدد';
-
-              const labelParts: string[] = [];
-              if (colorName) labelParts.push(`رنگ ${colorName}`);
-              if (subItem.variantTitle) labelParts.push(subItem.variantTitle);
-              const variantLabel = labelParts.length > 0 ? labelParts.join(' - ') : 'مدل استاندارد';
-
-              const bundleItems = isBundle ? extractBundleItemsList(subItem) : [];
-              const bundleBreakdown = isBundle ? formatBundleBreakdown(bundleItems) : null;
-
-              return (
-                <div key={subItem.id ?? idx} className="space-y-1 text-xs print:text-[9px]">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="size-1.5 rounded-full bg-flora-600 dark:bg-flora-400 shrink-0" />
-                      <span className="font-bold text-soil-900 dark:text-dust-50">
-                        {variantLabel}:
-                      </span>
-                      <span className="font-medium text-soil-700 dark:text-dust-200">
-                        {toFa(displayQty)} {unitLabel}
-                      </span>
-                      <ItemColorBadge colorData={subItem.colorData ?? (subItem.selectedColorHex ? { selectedColorHex: subItem.selectedColorHex } : undefined)} />
-                    </div>
-                    <span className="font-bold text-soil-900 dark:text-dust-50">
-                      ({formatToman(subItem.lineTotalToman)} تومان)
-                    </span>
-                  </div>
-
-                  {bundleBreakdown && (
-                    <p className="text-[11px] text-flora-800 dark:text-flora-300 font-medium bg-flora-50/80 dark:bg-flora-900/40 px-2 py-0.5 rounded-md border border-flora-200/60 dark:border-flora-800/40 print:bg-transparent print:border-none print:p-0">
-                      {bundleBreakdown}
-                    </p>
-                  )}
-
-                  {isBundle && showAccordion && (
-                    <BundleDetailsAccordion
-                      bundleSize={bundleSize}
-                      bundleCount={displayQty}
-                      colorData={subItem.colorData}
-                      productBundleItems={subItem.product?.bundleItems}
-                    />
-                  )}
-                </div>
-              );
-            })}
+            {group.items.map((subItem, idx) => (
+              <OrderItemCard
+                key={subItem.id ?? idx}
+                item={subItem}
+                showImage={false}
+                linkTargetBlank={linkTargetBlank}
+              />
+            ))}
           </div>
 
           {/* Group Total row */}

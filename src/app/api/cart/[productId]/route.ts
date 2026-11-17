@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { getCartTotals } from '@/lib/cart';
@@ -80,18 +81,50 @@ export async function PATCH(req: Request, { params }: Params) {
     );
   }
 
-  const updated = await prisma.cartItem.updateMany({
+  const cartItem = await prisma.cartItem.findFirst({
     where: {
       userId: session.sub,
       productId,
       variantId: variantId ? variantId : null,
       ...(selectedColorHex !== undefined ? { selectedColorHex: selectedColorHex || null } : {}),
     },
-    data: { quantity: parsed.data.quantity },
   });
-  if (updated.count === 0) {
+
+  if (!cartItem) {
     return NextResponse.json({ message: 'کالا در سبد یافت نشد' }, { status: 404 });
   }
+
+  let updatedColorData = cartItem.colorData;
+  if (isBundle && cartItem.colorData && typeof cartItem.colorData === 'object') {
+    const cd = cartItem.colorData as Record<string, unknown>;
+    if (Array.isArray(cd.bundleSelections) && cd.bundleSelections.length > 0) {
+      const newBundleCount = Math.max(1, Math.floor(parsed.data.quantity / bundleSize));
+      let newSelections = [...cd.bundleSelections];
+      if (newSelections.length > newBundleCount) {
+        newSelections = newSelections.slice(0, newBundleCount);
+      } else {
+        while (newSelections.length < newBundleCount) {
+          const last = newSelections[newSelections.length - 1];
+          newSelections.push({
+            ...(typeof last === 'object' && last !== null ? last : {}),
+            bundleIndex: newSelections.length + 1,
+          });
+        }
+      }
+      updatedColorData = {
+        ...cd,
+        bundleSelections: newSelections,
+      };
+    }
+  }
+
+  await prisma.cartItem.update({
+    where: { id: cartItem.id },
+    data: {
+      quantity: parsed.data.quantity,
+      ...(updatedColorData !== undefined ? { colorData: updatedColorData as Prisma.InputJsonValue } : {}),
+    },
+  });
 
   const totals = await getCartTotals(session.sub);
   return NextResponse.json({ ok: true, totals });
