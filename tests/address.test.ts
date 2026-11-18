@@ -9,7 +9,9 @@ describe('Address normalization', () => {
       fullName: '  علی رضایی  ',
       phone: '09121234567',
       province: 'تهران',
+      provinceCode: '8',
       city: 'تهران',
+      cityCode: 801,
       postalCode: ' 1234567890 ',
       line1: 'خیابان ولیعصر',
       line2: ' پلاک ۱۲ ',
@@ -22,7 +24,9 @@ describe('Address normalization', () => {
     assert.equal(result.fullName, 'علی رضایی');
     assert.equal(result.phone, '09121234567');
     assert.equal(result.province, 'تهران');
+    assert.equal(result.provinceCode, 8);
     assert.equal(result.city, 'تهران');
+    assert.equal(result.cityCode, 801);
     assert.equal(result.postalCode, '1234567890');
     assert.equal(result.line1, 'خیابان ولیعصر');
     assert.equal(result.line2, 'پلاک ۱۲');

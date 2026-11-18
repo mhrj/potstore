@@ -15,8 +15,8 @@ export type AddressRecord = {
   phone: string;
   province: string;
   city: string;
-  provinceCode?: number | string;
-  cityCode?: number | string;
+  provinceCode?: number | string | null;
+  cityCode?: number | string | null;
   postalCode: string;
   line1: string;
   line2: string | null;
@@ -47,8 +47,8 @@ function toFormState(address?: AddressRecord): FormState {
     phone: address.phone,
     province: address.province,
     city: address.city,
-    provinceCode: address.provinceCode,
-    cityCode: address.cityCode,
+    provinceCode: address.provinceCode ?? undefined,
+    cityCode: address.cityCode ?? undefined,
     postalCode: address.postalCode,
     line1: address.line1,
     line2: address.line2 ?? '',

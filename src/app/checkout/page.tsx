@@ -1,9 +1,9 @@
 import { requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { getCartTotals } from '@/lib/cart';
-import { calculateShippingCost, resolveCityCode } from '@/lib/postex';
 import { calcShippingToman } from '@/lib/pricing';
 import { fetchTapinLocations } from '@/lib/providers/shipping/tapin/locations';
+import { calculateTapinRate } from '@/lib/providers/shipping/tapin/rates';
 import Container from '@/components/ui/Container';
 import { CheckoutForm } from '@/features/checkout';
 import { redirect } from 'next/navigation';
@@ -23,42 +23,40 @@ export default async function CheckoutPage() {
     }),
   ]);
 
-  console.log('TAPIN DATA FETCHED:', locations.length);
-
   if (totals.lines.length === 0) {
     redirect('/cart');
   }
 
-  // Pre-calculate shipping rates with Postex helper for all available addresses
-  let originCity = 'تهران';
-  try {
-    const settings = await prisma.storeSettings.findUnique({
-      where: { id: 'singleton' },
-    });
-    if (settings?.originCity) {
-      originCity = settings.originCity;
-    }
-  } catch {
-    // fallback
-  }
-  const fromCityCode = resolveCityCode(originCity);
+  // Pre-calculate shipping rates with Tapin for all available addresses
+  const isFreeShipping = totals.payableToman >= 5_000_000;
   const initialShippingRates: Record<string, number> = {};
+  let initialWeightLimitError: string | null = null;
 
-  await Promise.all(
-    addresses.map(async (a) => {
-      const rate = await calculateShippingCost({
-        originCity,
-        from_city_code: fromCityCode,
-        destinationCity: a.city || a.province,
-        weightGrams: totals.totalWeightGrams,
-        fallbackTotals: totals,
-      });
-      initialShippingRates[a.id] =
-        typeof rate === 'number'
-          ? rate
-          : calcShippingToman(totals, a.city || a.province);
-    }),
-  );
+  if (totals.totalWeightGrams > 30000) {
+    initialWeightLimitError =
+      'سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.';
+  } else {
+    await Promise.all(
+      addresses.map(async (a) => {
+        if (isFreeShipping) {
+          initialShippingRates[a.id] = 0;
+          return;
+        }
+        try {
+          const rate = await calculateTapinRate(a, totals.lines);
+          initialShippingRates[a.id] = rate.costToman;
+        } catch (err) {
+          if (err instanceof Error && err.message === 'WEIGHT_LIMIT_EXCEEDED') {
+            initialWeightLimitError =
+              'سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.';
+            return;
+          }
+          console.warn(`[checkout] Tapin rate failed for address ${a.id}:`, err);
+          initialShippingRates[a.id] = calcShippingToman(totals, a.city || a.province);
+        }
+      }),
+    );
+  }
 
   return (
     <Container className="py-12">
@@ -75,7 +73,9 @@ export default async function CheckoutPage() {
             fullName: a.fullName,
             phone: a.phone,
             province: a.province,
+            provinceCode: a.provinceCode,
             city: a.city,
+            cityCode: a.cityCode,
             postalCode: a.postalCode,
             line1: a.line1,
             line2: a.line2,
@@ -83,6 +83,7 @@ export default async function CheckoutPage() {
           }))}
           totals={totals}
           initialShippingRates={initialShippingRates}
+          initialWeightLimitError={initialWeightLimitError}
           locations={locations}
           provinces={locations}
         />

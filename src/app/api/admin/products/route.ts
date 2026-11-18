@@ -93,6 +93,9 @@ const schema = z.object({
   isFeatured: z.boolean(),
   allowBatchDiscount: z.boolean().optional().default(true),
   isFragile: z.boolean().optional().default(false),
+  packageLengthCm: z.number({ invalid_type_error: 'طول بسته‌بندی باید عدد باشد' }).int().min(1).default(30),
+  packageWidthCm: z.number({ invalid_type_error: 'عرض بسته‌بندی باید عدد باشد' }).int().min(1).default(30),
+  packageHeightCm: z.number({ invalid_type_error: 'ارتفاع بسته‌بندی باید عدد باشد' }).int().min(1).default(30),
   // Display-only extras the admin names themselves; the semantic flags above
   // are separate columns because pricing and catalogue queries read them.
   features: z
@@ -169,6 +172,9 @@ export async function POST(req: Request) {
       isFeatured: data.isFeatured,
       allowBatchDiscount: data.allowBatchDiscount,
       isFragile: data.isFragile,
+      packageLengthCm: data.packageLengthCm,
+      packageWidthCm: data.packageWidthCm,
+      packageHeightCm: data.packageHeightCm,
       features: data.features,
       images: {
         create: data.images.map((url, i) => ({ url, sortOrder: i, alt: data.name })),

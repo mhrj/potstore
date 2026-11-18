@@ -95,6 +95,9 @@ const schema = z.object({
   isFeatured: z.boolean(),
   allowBatchDiscount: z.boolean().optional().default(true),
   isFragile: z.boolean().optional().default(false),
+  packageLengthCm: z.number({ invalid_type_error: 'طول بسته‌بندی باید عدد باشد' }).int().min(1).default(30),
+  packageWidthCm: z.number({ invalid_type_error: 'عرض بسته‌بندی باید عدد باشد' }).int().min(1).default(30),
+  packageHeightCm: z.number({ invalid_type_error: 'ارتفاع بسته‌بندی باید عدد باشد' }).int().min(1).default(30),
   // Display-only extras the admin names themselves; the semantic flags above
   // are separate columns because pricing and catalogue queries read them.
   features: z
@@ -188,6 +191,9 @@ export async function PATCH(req: Request, { params }: Params) {
         isFeatured: data.isFeatured,
         allowBatchDiscount: data.allowBatchDiscount,
         isFragile: data.isFragile,
+        packageLengthCm: data.packageLengthCm,
+        packageWidthCm: data.packageWidthCm,
+        packageHeightCm: data.packageHeightCm,
         // Replaced wholesale, like images/tiers/tags above — the array the form
         // submits *is* the feature list, so there is nothing to merge.
         features: data.features,

@@ -79,24 +79,26 @@ model User {
 }
 
 model Address {
-  id         String       @id @default(cuid())
-  userId     String
-  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  label      AddressLabel @default(HOME)
-  fullName   String
-  phone      String
-  province   String
-  city       String
-  postalCode String
-  line1      String
-  line2      String?
-  isDefault  Boolean      @default(false)
+  label        AddressLabel @default(HOME)
+  fullName     String
+  phone        String
+  province     String
+  provinceCode Int?
+  city         String
+  cityCode     Int?
+  postalCode   String
+  line1        String
+  line2        String?
+  isDefault    Boolean      @default(false)
 
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 
-  orders     Order[]
+  orders       Order[]
 
   @@index([userId])
 }
@@ -132,6 +134,9 @@ model Product {
   isFeatured    Boolean  @default(false)
   allowBatchDiscount Boolean @default(true)
   isFragile     Boolean  @default(false)
+  packageLengthCm Int    @default(30)
+  packageWidthCm  Int    @default(30)
+  packageHeightCm Int    @default(30)
 
   // Admin-defined display-only features, stored as [{ label, enabled }].
   // JSON rather than a table because the shopkeeper owns the whole list: it is
@@ -342,7 +347,9 @@ model Order {
   shipFullName   String
   shipPhone      String
   shipProvince   String
+  shipProvinceCode Int?
   shipCity       String
+  shipCityCode   Int?
   shipPostalCode String
   shipLine1      String
   shipLine2      String?
@@ -488,10 +495,12 @@ model PageView {
 }
 
 model StoreSettings {
-  id              String   @id @default("singleton")
-  originProvince  String   @default("تهران")
-  originCity      String   @default("تهران")
-  updatedAt       DateTime @updatedAt
+  id                 String   @id @default("singleton")
+  originProvince     String   @default("تهران")
+  originProvinceCode Int?
+  originCity         String   @default("تهران")
+  originCityCode     Int?
+  updatedAt          DateTime @updatedAt
 }
 
 model Article {

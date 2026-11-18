@@ -25,10 +25,20 @@ export const addressInputSchema = z
       .string({ required_error: 'نام استان الزامی است' })
       .trim()
       .min(2, 'نام استان الزامی است'),
+    provinceCode: z.preprocess((val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const num = Number(val);
+      return isNaN(num) ? null : num;
+    }, z.number().int().nullable().optional()),
     city: z
       .string({ required_error: 'نام شهر الزامی است' })
       .trim()
       .min(2, 'نام شهر الزامی است'),
+    cityCode: z.preprocess((val) => {
+      if (val === undefined || val === null || val === '') return null;
+      const num = Number(val);
+      return isNaN(num) ? null : num;
+    }, z.number().int().nullable().optional()),
     postalCode: z.preprocess(
       (val) => (typeof val === 'string' ? toEn(val).trim() : val),
       z
@@ -53,7 +63,9 @@ export const addressInputSchema = z
     fullName: value.fullName.trim(),
     phone: value.phone.replace(/\s+/g, ''),
     province: value.province.trim(),
+    provinceCode: value.provinceCode ?? null,
     city: value.city.trim(),
+    cityCode: value.cityCode ?? null,
     postalCode: value.postalCode.replace(/\s+/g, ''),
     line1: value.line1.trim(),
     line2: value.line2 && value.line2.trim() ? value.line2.trim() : null,

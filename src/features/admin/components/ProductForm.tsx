@@ -45,6 +45,9 @@ export type ProductFormData = {
   isFeatured: boolean;
   allowBatchDiscount?: boolean;
   isFragile?: boolean;
+  packageLengthCm?: number;
+  packageWidthCm?: number;
+  packageHeightCm?: number;
   features: ProductFeature[];
   images: string[];
   tagIds: string[];
@@ -115,6 +118,9 @@ export default function ProductForm({
     colorOptions: initial.colorOptions ?? [],
     allowBatchDiscount: initial.allowBatchDiscount ?? true,
     isFragile: initial.isFragile ?? false,
+    packageLengthCm: initial.packageLengthCm ?? 30,
+    packageWidthCm: initial.packageWidthCm ?? 30,
+    packageHeightCm: initial.packageHeightCm ?? 30,
     salePriceToman: initial.salePriceToman ?? null,
     variants: initial.variants ?? [],
   });
@@ -603,6 +609,9 @@ export default function ProductForm({
         })),
         allowBatchDiscount: form.allowBatchDiscount ?? true,
         isFragile: form.isFragile ?? false,
+        packageLengthCm: Math.max(1, Math.floor(Number(form.packageLengthCm)) || 30),
+        packageWidthCm: Math.max(1, Math.floor(Number(form.packageWidthCm)) || 30),
+        packageHeightCm: Math.max(1, Math.floor(Number(form.packageHeightCm)) || 30),
         salePriceToman: form.salePriceToman && form.salePriceToman > 0 ? form.salePriceToman : null,
         tagIds: [...new Set(form.tagIds)],
         images: form.images.filter((u) => u.trim().length > 0),
@@ -945,8 +954,62 @@ export default function ProductForm({
               className="accent-flora-700"
             />
             <label htmlFor="product-isFragile" className="cursor-pointer">
-              کالای شکستنی (Fragile)
+              شکستنی است (نیاز به بسته‌بندی ویژه)
             </label>
+          </div>
+        </div>
+
+        {/* Package Dimensions */}
+        <div className="mt-5 border-t border-soil-900/10 dark:border-dust-50/10 pt-4">
+          <label className="block mb-2">
+            <span className={labelCls}>ابعاد بسته‌بندی (سانتی‌متر)</span>
+            <span className="block mt-0.5 text-xs text-soil-700/60 dark:text-dust-200/60">
+              ابعاد کارتن بسته‌بندی برای محاسبه دقیق هزینه حمل و نقل و وزن حجمی در تاپین.
+            </span>
+          </label>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="block">
+              <label htmlFor="product-packageLengthCm" className={labelCls}>
+                طول (cm)
+              </label>
+              <input
+                id="product-packageLengthCm"
+                name="packageLengthCm"
+                type="number"
+                min={1}
+                value={form.packageLengthCm ?? 30}
+                onChange={(e) => update('packageLengthCm', Math.max(1, Number(e.target.value) || 1))}
+                className={inputCls}
+              />
+            </div>
+            <div className="block">
+              <label htmlFor="product-packageWidthCm" className={labelCls}>
+                عرض (cm)
+              </label>
+              <input
+                id="product-packageWidthCm"
+                name="packageWidthCm"
+                type="number"
+                min={1}
+                value={form.packageWidthCm ?? 30}
+                onChange={(e) => update('packageWidthCm', Math.max(1, Number(e.target.value) || 1))}
+                className={inputCls}
+              />
+            </div>
+            <div className="block">
+              <label htmlFor="product-packageHeightCm" className={labelCls}>
+                ارتفاع (cm)
+              </label>
+              <input
+                id="product-packageHeightCm"
+                name="packageHeightCm"
+                type="number"
+                min={1}
+                value={form.packageHeightCm ?? 30}
+                onChange={(e) => update('packageHeightCm', Math.max(1, Number(e.target.value) || 1))}
+                className={inputCls}
+              />
+            </div>
           </div>
         </div>
 

@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 import { calcShippingToman, priceCart, type Tier } from '@/lib/pricing';
-import { calculateShippingCost, resolveCityCode } from '@/lib/postex';
+import { calculateTapinRate } from '@/lib/providers/shipping/tapin/rates';
 import { parseBundleItems, parseColorOptions } from '@/lib/product-features';
 import { zarinpalRequest, ZARINPAL_ERRORS } from '@/lib/zarinpal';
 
@@ -89,6 +89,10 @@ export async function POST(req: Request) {
           bundleSize: true,
           allowBatchDiscount: true,
           isActive: true,
+          isFragile: true,
+          packageLengthCm: true,
+          packageWidthCm: true,
+          packageHeightCm: true,
           bundleItems: true,
           colorOptions: true,
           tiers: {
@@ -203,6 +207,10 @@ export async function POST(req: Request) {
         bundleItems: parseBundleItems(i.product.bundleItems, i.product.stock),
         images: i.product.images,
         allowBatchDiscount: i.product.allowBatchDiscount,
+        isFragile: i.product.isFragile,
+        packageLengthCm: i.product.packageLengthCm,
+        packageWidthCm: i.product.packageWidthCm,
+        packageHeightCm: i.product.packageHeightCm,
       },
       tiers: i.product.tiers.map(
         (t): Tier => ({
@@ -220,40 +228,47 @@ export async function POST(req: Request) {
     })),
   );
 
-  let originCity = 'تهران';
-  try {
-    const settings = await prisma.storeSettings.findUnique({
-      where: { id: 'singleton' },
-    });
-    if (settings?.originCity) {
-      originCity = settings.originCity;
-    }
-  } catch {
-    // fallback
+  // 5) Calculate shipping rate using Tapin Pishtaz Post provider
+  if (totals.totalWeightGrams > 30000) {
+    return NextResponse.json(
+      {
+        error: 'WEIGHT_LIMIT',
+        message:
+          'سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.',
+      },
+      { status: 400 },
+    );
   }
-  const fromCityCode = resolveCityCode(originCity);
-  const pishtazResult = await calculateShippingCost({
-    originCity,
-    from_city_code: fromCityCode,
-    destinationCity: address.city || address.province,
-    weightGrams: totals.totalWeightGrams,
-    fallbackTotals: totals,
-  });
-  const pishtazShippingToman =
-    typeof pishtazResult === 'number'
-      ? pishtazResult
-      : calcShippingToman(totals, address.city || address.province);
+
+  let shippingToman = 0;
+  if (totals.payableToman < 5_000_000) {
+    try {
+      const rate = await calculateTapinRate(address, totals.lines);
+      shippingToman = rate.costToman;
+    } catch (err) {
+      if (err instanceof Error && err.message === 'WEIGHT_LIMIT_EXCEEDED') {
+        return NextResponse.json(
+          {
+            error: 'WEIGHT_LIMIT',
+            message:
+              'سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.',
+          },
+          { status: 400 },
+        );
+      }
+      console.warn('[payment/request] Tapin rate failed, falling back to pricing engine:', err);
+      shippingToman = calcShippingToman(totals, address.city || address.province);
+    }
+  }
 
   const shippingCarrier = 'پست پیشتاز';
-  const shippingToman = pishtazShippingToman;
-
   const totalToman = totals.payableToman + shippingToman;
 
   if (totalToman <= 0) {
     return NextResponse.json({ message: 'مبلغ سفارش نامعتبر است' }, { status: 400 });
   }
 
-  // 5) Create the PENDING order.
+  // 6) Create the PENDING order.
   const order = await prisma.order.create({
     data: {
       orderNumber: generateOrderNumber(),
@@ -272,7 +287,9 @@ export async function POST(req: Request) {
       shipFullName: address.fullName,
       shipPhone: address.phone,
       shipProvince: address.province,
+      shipProvinceCode: address.provinceCode,
       shipCity: address.city,
+      shipCityCode: address.cityCode,
       shipPostalCode: address.postalCode,
       shipLine1: address.line1,
       shipLine2: address.line2,
@@ -348,7 +365,7 @@ export async function POST(req: Request) {
     },
   });
 
-  // 6) Ask Zarinpal for an authority token.
+  // 7) Ask Zarinpal for an authority token.
   const origin = req.headers.get('origin') || new URL(req.url).origin;
   const appUrl = process.env.NODE_ENV === 'production' ? process.env.NEXT_PUBLIC_APP_URL! : origin;
   const callbackUrl = `${appUrl}/api/payment/verify?order=${order.id}`;
@@ -377,7 +394,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // 7) Persist the authority token.
+  // 8) Persist the authority token.
   await prisma.order.update({
     where: { id: order.id },
     data: { zarinpalAuthority: result.authority },

@@ -17,12 +17,13 @@ type Address = {
   fullName: string;
   phone: string;
   province: string;
+  provinceCode?: number | string | null;
   city: string;
+  cityCode?: number | string | null;
   postalCode: string;
   line1: string;
   line2: string | null;
   isDefault: boolean;
-  cityCode?: number | string;
 };
 
 export type ShippingOption = {
@@ -53,12 +54,14 @@ export default function CheckoutForm({
   addresses,
   totals,
   initialShippingRates = {},
+  initialWeightLimitError = null,
   locations,
   provinces,
 }: {
   addresses: Address[];
   totals: CartTotals;
   initialShippingRates?: Record<string, number>;
+  initialWeightLimitError?: string | null;
   locations?: TapinProvince[];
   provinces?: TapinProvince[];
 }) {
@@ -70,6 +73,7 @@ export default function CheckoutForm({
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const selectedCarrier = "پست پیشتاز";
   const [calculatingShipping, setCalculatingShipping] = useState(false);
+  const [weightLimitError, setWeightLimitError] = useState<string | null>(initialWeightLimitError ?? null);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +95,7 @@ export default function CheckoutForm({
     return {
       ...addr,
       cityCode: addr.cityCode ?? resolveCityCode(addr.city || addr.province),
+      provinceCode: addr.provinceCode ?? null,
     };
   }, [addressList, selectedId]);
 
@@ -127,6 +132,7 @@ export default function CheckoutForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         cityCode: selectedAddress.cityCode,
+        provinceCode: selectedAddress.provinceCode,
         weightGrams: totals.totalWeightGrams,
         addressId: selectedAddress.id,
         city: selectedAddress.city,
@@ -135,10 +141,20 @@ export default function CheckoutForm({
     })
       .then((res) => res.json())
       .then((data) => {
-        if (!cancelled && data?.ok) {
-          const opts = data.shippingOptions ?? data.options;
-          if (Array.isArray(opts) && opts.length > 0) {
-            setShippingOptions(opts);
+        if (!cancelled) {
+          if (data?.error === "WEIGHT_LIMIT" || data?.message?.includes("۳۰ کیلوگرم")) {
+            setWeightLimitError(
+              data.message ||
+                "سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.",
+            );
+            return;
+          }
+          setWeightLimitError(null);
+          if (data?.ok) {
+            const opts = data.shippingOptions ?? data.options;
+            if (Array.isArray(opts) && opts.length > 0) {
+              setShippingOptions(opts);
+            }
           }
         }
       })
@@ -189,6 +205,10 @@ export default function CheckoutForm({
   };
 
   const pay = async () => {
+    if (weightLimitError) {
+      setError(weightLimitError);
+      return;
+    }
     if (!selectedId) {
       setError("یک آدرس ارسال انتخاب کنید");
       return;
@@ -364,7 +384,49 @@ export default function CheckoutForm({
             روش ارسال مرسوله خود را انتخاب کنید:
           </p>
 
-          {calculatingShipping ? (
+          {weightLimitError ? (
+            <div
+              role="alert"
+              className="rounded-2xl border border-red-300 dark:border-red-800/80 bg-red-50 dark:bg-red-950/60 p-4 text-xs text-red-800 dark:text-red-200 space-y-3 shadow-xs"
+            >
+              <div className="flex items-start gap-3">
+                <svg
+                  className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+                <div className="flex-1 leading-relaxed">
+                  <p className="font-bold text-sm text-red-900 dark:text-red-100">
+                    محدودیت وزن پست پیشتاز (حداکثر ۳۰ کیلوگرم)
+                  </p>
+                  <p className="mt-1 font-medium">{weightLimitError}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 pt-2.5 border-t border-red-200/80 dark:border-red-800/40 text-xs font-bold">
+                <a
+                  href="/about#contact"
+                  className="inline-flex items-center gap-1.5 text-red-800 dark:text-red-300 hover:text-red-950 dark:hover:text-red-100 underline underline-offset-4"
+                >
+                  تماس با پشتیبانی
+                </a>
+                <span className="text-red-300 dark:text-red-700">|</span>
+                <a
+                  href="/cart"
+                  className="inline-flex items-center gap-1.5 text-red-800 dark:text-red-300 hover:text-red-950 dark:hover:text-red-100 underline underline-offset-4"
+                >
+                  ویرایش و کاهش اقلام سبد خرید
+                </a>
+              </div>
+            </div>
+          ) : calculatingShipping ? (
             <div className="flex flex-col items-center justify-center py-8 text-soil-700/60 dark:text-dust-200/60">
               <svg
                 className="h-8 w-8 animate-spin text-flora-700 dark:text-flora-300 mb-2"
@@ -435,14 +497,16 @@ export default function CheckoutForm({
         <button
           type="button"
           onClick={pay}
-          disabled={loading || calculatingShipping || !selectedId}
-          className="w-full rounded-2xl bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-4 text-sm font-black shadow-lg shadow-flora-900/20 transition-colors hover:bg-flora-700 disabled:opacity-50 cursor-pointer"
+          disabled={loading || calculatingShipping || !selectedId || Boolean(weightLimitError)}
+          className="w-full rounded-2xl bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-4 text-sm font-black shadow-lg shadow-flora-900/20 transition-colors hover:bg-flora-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading
             ? "در حال انتقال به درگاه…"
-            : calculatingShipping
-              ? "در حال محاسبه هزینه ارسال…"
-              : "پرداخت امن با زرین‌پال"}
+            : weightLimitError
+              ? "امکان پرداخت سفارش بیش از ۳۰ کیلوگرم با پست وجود ندارد"
+              : calculatingShipping
+                ? "در حال محاسبه هزینه ارسال…"
+                : "پرداخت امن با زرین‌پال"}
         </button>
 
         <ShippingScheduleNotice compact={true} className="mt-3" />
@@ -486,6 +550,10 @@ export default function CheckoutForm({
               <dd>
                 {calculatingShipping ? (
                   <span className="text-soil-700/60 dark:text-dust-200/60 text-xs">…</span>
+                ) : weightLimitError ? (
+                  <span className="text-red-600 dark:text-red-400 text-xs font-bold">
+                    غیرقابل ارسال با پست
+                  </span>
                 ) : effectiveShippingToman === 0 ? (
                   "رایگان"
                 ) : (
@@ -495,7 +563,9 @@ export default function CheckoutForm({
             </div>
             <div className="flex justify-between text-soil-900 dark:text-dust-50">
               <dt>وزن تقریبی</dt>
-              <dd>{formatWeight(totals.totalWeightGrams)}</dd>
+              <dd className={totals.totalWeightGrams > 30000 ? "text-red-600 dark:text-red-400 font-bold" : ""}>
+                {formatWeight(totals.totalWeightGrams)}
+              </dd>
             </div>
             <div className="flex justify-between border-t border-soil-900/10 dark:border-dust-50/10 pt-3 text-base font-black text-soil-900 dark:text-dust-50">
               <dt>قابل پرداخت</dt>
@@ -505,11 +575,15 @@ export default function CheckoutForm({
                     <span className="text-soil-700/60 dark:text-dust-200/60 text-sm">
                       در حال محاسبه…
                     </span>
+                  ) : weightLimitError ? (
+                    <span className="text-red-600 dark:text-red-400 text-xs font-bold">
+                      نیازمند هماهنگی پشتیبانی
+                    </span>
                   ) : (
                     formatToman(grandTotalToman)
                   )}
                 </div>
-                {!calculatingShipping && grandTotalToman >= 1000 && (
+                {!calculatingShipping && !weightLimitError && grandTotalToman >= 1000 && (
                   <div className="text-[11px] font-normal text-soil-700/70 dark:text-dust-200/70 mt-0.5">
                     ({numberToWordsFa(grandTotalToman)} تومان)
                   </div>

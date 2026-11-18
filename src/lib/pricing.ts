@@ -38,6 +38,11 @@ export type PricedLine = {
   weightGrams: number;
   lineWeightGrams: number;
 
+  isFragile?: boolean;
+  packageLengthCm?: number;
+  packageWidthCm?: number;
+  packageHeightCm?: number;
+
   unitsPerCarton: number;
   cartons: number;
 
@@ -156,6 +161,10 @@ type PriceInput = {
     bundleItems?: BundleItem[] | null;
     images?: { url: string }[];
     allowBatchDiscount?: boolean;
+    isFragile?: boolean;
+    packageLengthCm?: number;
+    packageWidthCm?: number;
+    packageHeightCm?: number;
   };
   tiers: Tier[];
   quantity: number;
@@ -327,6 +336,10 @@ export function priceLine({
     savingsPercent,
     weightGrams: singleBundleWeight,
     lineWeightGrams,
+    isFragile: product.isFragile ?? false,
+    packageLengthCm: product.packageLengthCm ?? 30,
+    packageWidthCm: product.packageWidthCm ?? 30,
+    packageHeightCm: product.packageHeightCm ?? 30,
     unitsPerCarton: product.unitsPerCarton ?? 1,
     cartons,
     tierLabel: tier.label ?? (hasSale ? 'تخفیف ویژه' : CHANNEL_LABEL[resolveChannel(qty)]),

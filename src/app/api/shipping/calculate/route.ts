@@ -3,8 +3,11 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getCartTotals } from "@/lib/cart";
-import { calculatePostexShipping, resolveCityCode } from "@/lib/postex";
 import { calcShippingToman } from "@/lib/pricing";
+import {
+  calculateTapinRate,
+  type ShippingAddressLike,
+} from "@/lib/providers/shipping/tapin/rates";
 
 export const runtime = "nodejs";
 
@@ -16,11 +19,12 @@ export type ShippingOption = {
 };
 
 const schema = z.object({
-  cityCode: z.union([z.number(), z.string()]).optional(),
-  weightGrams: z.number().optional(),
-  addressId: z.string().optional(),
-  city: z.string().optional(),
-  province: z.string().optional(),
+  cityCode: z.union([z.number(), z.string()]).optional().nullable(),
+  provinceCode: z.union([z.number(), z.string()]).optional().nullable(),
+  weightGrams: z.number().optional().nullable(),
+  addressId: z.string().optional().nullable(),
+  city: z.string().optional().nullable(),
+  province: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -37,87 +41,100 @@ export async function POST(req: Request) {
     );
   }
 
-  const { cityCode, weightGrams, addressId, city, province } = parsed.data;
+  const { cityCode, provinceCode, addressId, city, province } = parsed.data;
 
-  // 1) Determine destination and numeric city code
-  let destination = city || province || "";
-  let resolvedCode: number | null = null;
+  // 1) Determine address from database if addressId provided
+  const address = addressId
+    ? await prisma.address.findFirst({
+        where: { id: addressId, userId: session.sub },
+      })
+    : null;
 
-  if (typeof cityCode === "number") {
-    resolvedCode = cityCode;
-  } else if (typeof cityCode === "string" && /^\d+$/.test(cityCode.trim())) {
-    resolvedCode = parseInt(cityCode.trim(), 10);
-  } else if (typeof cityCode === "string" && cityCode.trim()) {
+  // 2) Determine destination and numeric codes
+  let resolvedCityCode: number | null = address?.cityCode ?? null;
+  if (resolvedCityCode === null) {
+    if (typeof cityCode === "number") {
+      resolvedCityCode = cityCode;
+    } else if (typeof cityCode === "string" && /^\d+$/.test(cityCode.trim())) {
+      resolvedCityCode = parseInt(cityCode.trim(), 10);
+    }
+  }
+
+  let resolvedProvinceCode: number | null = address?.provinceCode ?? null;
+  if (resolvedProvinceCode === null) {
+    if (typeof provinceCode === "number") {
+      resolvedProvinceCode = provinceCode;
+    } else if (typeof provinceCode === "string" && /^\d+$/.test(provinceCode.trim())) {
+      resolvedProvinceCode = parseInt(provinceCode.trim(), 10);
+    }
+  }
+
+  let destination = address?.city || city || "";
+  if (!destination && typeof cityCode === "string" && !/^\d+$/.test(cityCode.trim())) {
     destination = cityCode.trim();
   }
-
-  if (addressId && !destination) {
-    const address = await prisma.address.findFirst({
-      where: { id: addressId, userId: session.sub },
-      select: { city: true, province: true },
-    });
-    if (address) {
-      destination = address.city || address.province;
-    }
-  }
-
   if (!destination) {
-    destination = "تهران";
+    destination = address?.province || province || "تهران";
   }
 
-  if (resolvedCode === null) {
-    resolvedCode = resolveCityCode(destination);
-  }
+  const destinationProvince = address?.province || province || "تهران";
 
-  // 2) Get totals and weight
+  // 3) Get totals and check free shipping
   const totals = await getCartTotals(session.sub);
-  const effectiveWeight = weightGrams ?? totals.totalWeightGrams ?? 1000;
 
-  // 3) Fetch store settings for origin city and from_city_code
-  let originCity = "تهران";
-  try {
-    const settings = await prisma.storeSettings.findUnique({
-      where: { id: "singleton" },
-    });
-    if (settings?.originCity) {
-      originCity = settings.originCity;
-    }
-  } catch (err) {
-    console.warn(
-      "[shipping/calculate] Failed to read store settings, falling back to default:",
-      err,
+  // Check Post Pishtaz weight limit (30 kg)
+  if (totals.totalWeightGrams > 30000) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "WEIGHT_LIMIT",
+        message:
+          "سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.",
+      },
+      { status: 400 },
     );
   }
-  const fromCityCode = resolveCityCode(originCity);
 
-  let shippingToman: number;
+  const isFree = totals.payableToman >= 5_000_000;
 
-  try {
-    // 4) Call Postex API securely on the server
-    const postexResult = await calculatePostexShipping({
-      originCity,
-      destinationCity: destination,
-      weightGrams: effectiveWeight,
-      fallbackTotals: totals,
-      from_city_code: fromCityCode,
-      to_city_code: resolvedCode,
-    });
+  let shippingToman = 0;
 
-    if (typeof postexResult === "number") {
-      shippingToman = postexResult;
-    } else {
-      // Postex returned { ok: false }, silently fallback to calcShippingToman
-      shippingToman = calcShippingToman(totals, destination);
+  if (!isFree) {
+    const addressLike: ShippingAddressLike = {
+      fullName: address?.fullName ?? "مشتری",
+      phone: address?.phone ?? "",
+      province: destinationProvince,
+      provinceCode: resolvedProvinceCode,
+      city: destination,
+      cityCode: resolvedCityCode,
+      postalCode: address?.postalCode ?? "",
+      line1: address?.line1 ?? "",
+      line2: address?.line2 ?? null,
+    };
+
+    try {
+      const tapinResult = await calculateTapinRate(addressLike, totals.lines);
+      shippingToman = tapinResult.costToman;
+    } catch (error) {
+      if (error instanceof Error && error.message === "WEIGHT_LIMIT_EXCEEDED") {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "WEIGHT_LIMIT",
+            message:
+              "سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.",
+          },
+          { status: 400 },
+        );
+      }
+      console.warn(
+        "[shipping/calculate] Tapin rate failed, falling back to pricing engine:",
+        error,
+      );
+      shippingToman = calcShippingToman(totals, destinationProvince);
     }
-  } catch (error) {
-    console.warn(
-      "[shipping/calculate] Postex failed, falling back to pricing engine:",
-      error,
-    );
-    shippingToman = calcShippingToman(totals, destination);
   }
 
-  const isFree = totals.payableToman >= 5_000_000 || shippingToman === 0;
   const effectiveCost = isFree ? 0 : shippingToman;
 
   const options: ShippingOption[] = [
@@ -136,6 +153,7 @@ export async function POST(req: Request) {
     options,
     shippingOptions: options,
     destination,
-    cityCode: resolvedCode,
+    cityCode: resolvedCityCode,
+    provinceCode: resolvedProvinceCode,
   });
 }

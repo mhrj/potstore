@@ -57,6 +57,10 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
           stock: true,
           allowBatchDiscount: true,
           isActive: true,
+          isFragile: true,
+          packageLengthCm: true,
+          packageWidthCm: true,
+          packageHeightCm: true,
           images: { orderBy: { sortOrder: 'asc' }, take: 1, select: { url: true, alt: true } },
           tiers: {
             orderBy: { minQuantity: 'asc' },
@@ -88,6 +92,10 @@ export async function getCartTotals(userId: string): Promise<CartTotals> {
           bundleItems: parseBundleItems(i.product.bundleItems, i.product.stock),
           images: i.product.images,
           allowBatchDiscount: i.product.allowBatchDiscount,
+          isFragile: i.product.isFragile,
+          packageLengthCm: i.product.packageLengthCm,
+          packageWidthCm: i.product.packageWidthCm,
+          packageHeightCm: i.product.packageHeightCm,
         },
         tiers: i.product.tiers.map(
           (t): Tier => ({
