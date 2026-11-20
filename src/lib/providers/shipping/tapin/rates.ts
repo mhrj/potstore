@@ -1,4 +1,5 @@
-import { calculateChargeableWeight } from '@/lib/shipping-utils';
+import { chunkItemsIntoBoxes } from '@/lib/shipping-utils';
+import { logApiCall } from '@/lib/api-logger';
 
 export const FALLBACK_SHIPPING_COST_TOMAN = 50000;
 export const MAX_POST_WEIGHT_GRAMS = 30000;
@@ -18,6 +19,9 @@ export type ShippingAddressLike = {
 };
 
 export type ShippingItemLike = {
+  id?: string | null;
+  productId?: string | null;
+  variantId?: string | null;
   productName?: string | null;
   name?: string | null;
   quantity: number;
@@ -29,6 +33,10 @@ export type ShippingItemLike = {
   packageWidthCm?: number | null;
   packageHeightCm?: number | null;
   isFragile?: boolean | null;
+  product?: {
+    id?: string | null;
+    isFragile?: boolean | null;
+  } | null;
 };
 
 export type TapinProductPayload = {
@@ -59,7 +67,12 @@ export type TapinPriceCheckPayload = {
   box_id: number;
   packet_type: number;
   has_insurance: boolean;
-  content_type: number;
+  pre_paid_price: number;
+  packaging_price: number;
+  non_standard_package: boolean;
+  parcel_turning: boolean;
+  kiosk_id: number;
+  duration: number;
   products: TapinProductPayload[];
 };
 
@@ -72,66 +85,44 @@ export function buildTapinPriceCheckPayload(
   items: ShippingItemLike[],
 ): TapinPriceCheckPayload {
   const shopId = process.env.TAPIN_SHOP_ID || '';
-
-  const fullAddress = `${address.line1 || ''} ${address.line2 || ''}`.trim();
-  const rawCityCode = address.cityCode !== undefined && address.cityCode !== null ? String(address.cityCode) : '';
-  const rawProvinceCode =
-    address.provinceCode !== undefined && address.provinceCode !== null ? String(address.provinceCode) : '';
-
-  const nameParts = (address.fullName || '').trim().split(/\s+/).filter(Boolean);
+  const fullName = (address.fullName || '').trim();
+  const nameParts = fullName.split(' ').filter(Boolean);
   const firstName = nameParts[0] || 'مشتری';
   const lastName = nameParts.slice(1).join(' ') || 'فروشگاه';
 
-  const mobile = (address.phone || '').trim();
-  const postalCode = (address.postalCode || '').trim();
+  const fullAddress = `${address.line1 || ''} ${address.line2 || ''}`.trim();
+  const cityCode = address.cityCode !== undefined && address.cityCode !== null ? String(address.cityCode) : '';
+  const provinceCode =
+    address.provinceCode !== undefined && address.provinceCode !== null ? String(address.provinceCode) : '';
+  const mobile = address.phone ? String(address.phone).trim() : '';
+  const postalCode = address.postalCode ? String(address.postalCode).trim() : '';
 
-  // Package weight uses volumetric chargeable weight (or actual weight if greater)
-  const { chargeableWeight } = calculateChargeableWeight(
-    items.map((it) => {
-      const itemQty = it.quantity || 1;
-      const itemWeight =
-        it.weightGrams ??
-        (it.lineWeightGrams ? Math.round(it.lineWeightGrams / itemQty) : 500);
-      return {
-        weightGrams: itemWeight,
-        packageLengthCm: it.packageLengthCm,
-        packageWidthCm: it.packageWidthCm,
-        packageHeightCm: it.packageHeightCm,
-        quantity: itemQty,
-      };
-    }),
-  );
-  const packageWeight = Math.max(100, Math.round(chargeableWeight));
+  // Products mapping: unit prices in Rials (Toman * 10)
+  const products: TapinProductPayload[] = items.map((item) => {
+    const count = Math.max(1, Number(item.quantity) || 1);
+    const unitToman = Number(item.unitPriceToman ?? item.unitToman ?? 0);
+    const price = Math.max(0, Math.round(unitToman * 10));
+    const title = (item.productName || item.name || 'محصول').trim();
 
-  const hasInsurance = items.some((it) => it.isFragile === true);
-
-  // Map products. Note: Tapin expects unit prices in Rials (Toman * 10).
-  const products: TapinProductPayload[] = items.map((it) => {
-    const itemQty = it.quantity || 1;
-    const unitToman = it.unitPriceToman ?? it.unitToman ?? 0;
-    const unitRials = Math.max(0, Math.round(unitToman * 10));
-    const title = (it.productName || it.name || 'محصول').trim();
-    const weight = Math.max(
-      1,
-      it.weightGrams ?? (it.lineWeightGrams ? Math.round(it.lineWeightGrams / itemQty) : 500),
-    );
+    // The weight for Tapin MUST be the unit weight of a single product/bundle, NOT total line weight.
+    const weight = Math.max(1, Number(item.weightGrams ?? 500));
 
     return {
-      count: itemQty,
-      price: unitRials,
+      count,
+      discount: 0,
+      price,
       title,
       weight,
-      discount: 0,
       product_id: null,
     };
   });
 
   return {
     shop_id: shopId,
-    description: 'سفارش فروشگاه پات استور',
     address: fullAddress,
-    city_code: rawCityCode,
-    province_code: rawProvinceCode,
+    city_code: cityCode,
+    province_code: provinceCode,
+    description: 'سفارش فروشگاه پات استور',
     email: null,
     employee_code: '-1',
     first_name: firstName,
@@ -141,118 +132,113 @@ export function buildTapinPriceCheckPayload(
     postal_code: postalCode,
     pay_type: '1',
     order_type: '1',
-    package_weight: packageWeight,
-    box_id: 1,
+    pre_paid_price: 0,
+    packaging_price: 0,
+    package_weight: 500, // The empty box weight
+    box_id: 5, // Default box for estimates
     packet_type: 2,
-    has_insurance: hasInsurance,
-    content_type: 2,
+    non_standard_package: false,
+    kiosk_id: 0,
+    duration: 48,
+    parcel_turning: true,
+    has_insurance: false,
     products,
   };
 }
 
 /**
  * Calculates live shipping rates using Tapin Pishtaz Post check-price API.
- * Converts Rials returned by Tapin into Toman (divided by 10, rounded up).
- * Implements a strict 15-second timeout and graceful fallback to 50,000 Toman.
+ * For orders with total weight > 29,000g, chunks items into multiple virtual boxes (<=29kg each),
+ * queries Tapin in parallel via Promise.all, sums the total Rials, and converts to Toman.
+ * Implements a strict 15-second timeout and throws on errors without silent fallback.
  */
-export async function calculateTapinRate(
-  address: ShippingAddressLike,
-  items: ShippingItemLike[],
-): Promise<{ costToman: number; rawRials?: number; isFallback?: boolean }> {
-  const totalWeight = items.reduce((sum, item) => {
-    const qty = Math.max(1, item.quantity || 1);
-    const itemWeight =
-      item.weightGrams !== undefined && item.weightGrams !== null
-        ? item.weightGrams
-        : item.lineWeightGrams
-        ? Math.round(item.lineWeightGrams / qty)
-        : 500;
-    return sum + itemWeight * qty;
-  }, 0);
+export async function calculateTapinRate(address: any, cartItems: any[]): Promise<{ costToman: number }> {
+  // 1. Chunk the items into boxes (max 28,500g product weight to leave 1.5kg for empty box tare under 30kg)
+  const boxes = chunkItemsIntoBoxes(cartItems, 28500);
 
-  if (totalWeight > MAX_POST_WEIGHT_GRAMS) {
-    throw new Error('WEIGHT_LIMIT_EXCEEDED');
-  }
+  console.log(`[tapin-rates] Split cart into ${boxes.length} boxes.`);
 
-  const rawCityCode =
-    address.cityCode !== undefined && address.cityCode !== null
-      ? String(address.cityCode).trim()
-      : '';
-  const rawProvinceCode =
-    address.provinceCode !== undefined && address.provinceCode !== null
-      ? String(address.provinceCode).trim()
-      : '';
+  // 2. Map over the BOXES (not the cartItems) to make the API calls
+  const results = await Promise.all(
+    boxes.map(async (boxItems) => {
+      
+      const payload = {
+        shop_id: process.env.TAPIN_SHOP_ID,
+        address: `${address.line1} ${address.line2 || ''}`.trim(),
+        city_code: String(address.cityCode),
+        province_code: String(address.provinceCode),
+        description: "سفارش فروشگاه پات استور",
+        email: null,
+        employee_code: "-1",
+        first_name: address.fullName.split(' ')[0] || "مشتری",
+        last_name: address.fullName.split(' ').slice(1).join(' ') || "فروشگاه",
+        mobile: address.phone,
+        phone: null,
+        postal_code: String(address.postalCode),
+        pay_type: "1",
+        order_type: "1",
+        pre_paid_price: 0,
+        packaging_price: 0,
+        package_weight: 1500, // 1.5kg empty box weight
+        box_id: 5,
+        packet_type: 2,
+        non_standard_package: false,
+        kiosk_id: 0,
+        duration: 48,
+        parcel_turning: true,
+        has_insurance: false,
+        products: boxItems.map((item: any) => {
+          const unitToman =
+            item.priceToman ||
+            item.unitToman ||
+            item.unitPriceToman ||
+            item.listUnitToman ||
+            item.product?.salePriceToman ||
+            item.product?.basePriceToman ||
+            0;
+          const title =
+            item.productName ||
+            item.name ||
+            item.product?.name ||
+            item.title ||
+            "گلدان";
+          const weight =
+            item.weightGrams ||
+            item.product?.weightGrams ||
+            1000;
 
-  // If address has missing or empty province/city codes (e.g. legacy address),
-  // immediately fallback to default rate instead of calling Tapin with invalid codes.
-  if (!rawProvinceCode || !rawCityCode) {
-    console.warn(
-      `[tapin-rates] Missing provinceCode (${rawProvinceCode || 'empty'}) or cityCode (${rawCityCode || 'empty'}). Falling back to default rate directly without calling Tapin.`,
-    );
-    return { costToman: FALLBACK_SHIPPING_COST_TOMAN, isFallback: true };
-  }
+          return {
+            count: item.quantity,
+            discount: 0,
+            price: Math.max(0, Math.round(unitToman * 10)), // Convert to Rials
+            title,
+            weight,
+            product_id: null,
+          };
+        }),
+      };
 
-  const token = (process.env.TAPIN_API_TOKEN || '').trim();
-  const authHeader = token.startsWith('Bearer ')
-    ? token
-    : token.startsWith('jwt ')
-    ? token
-    : `Bearer ${token}`;
+      const res = await fetch("https://api.tapin.ir/api/v2/public/order/post/check-price/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.TAPIN_API_TOKEN}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-  const payload = buildTapinPriceCheckPayload(address, items);
+      const data = await res.json();
+      logApiCall("tapin", "/check-price", payload, data);
 
-  console.log('[tapin-rates] Sending Payload:', JSON.stringify(payload, null, 2));
+      if (data.returns.status !== 200) {
+        throw new Error(data.returns.message || "Tapin API failed");
+      }
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 15000);
+      return data.entries.total_price;
+    })
+  );
 
-  try {
-    const res = await fetch('https://api.tapin.ir/api/v2/public/order/post/check-price/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: authHeader,
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    const data = await res.json().catch(() => null);
-
-    if (!res.ok || data?.returns?.status !== 200) {
-      console.error(
-        '[tapin-rates] Tapin API Error:',
-        data?.returns?.message,
-        data?.entries,
-      );
-      throw new Error(data?.returns?.message || 'Tapin API failed');
-    }
-
-    const totalPriceRials = Number(data?.entries?.total_price);
-    if (!Number.isFinite(totalPriceRials) || totalPriceRials < 0) {
-      console.warn(
-        '[tapin-rates] Invalid total_price received from Tapin:',
-        data?.entries?.total_price,
-      );
-      return { costToman: FALLBACK_SHIPPING_COST_TOMAN, isFallback: true };
-    }
-
-    // Convert Rials to Toman
-    const costToman = Math.ceil(totalPriceRials / 10);
-    return {
-      costToman,
-      rawRials: totalPriceRials,
-      isFallback: false,
-    };
-  } catch (err: unknown) {
-    const isTimeout = err instanceof Error && err.name === 'AbortError';
-    console.warn(
-      `[tapin-rates] Request failed (${isTimeout ? '15s timeout' : (err as Error)?.message}), using fallback flat rate:`,
-      FALLBACK_SHIPPING_COST_TOMAN,
-    );
-    return { costToman: FALLBACK_SHIPPING_COST_TOMAN, isFallback: true };
-  } finally {
-    clearTimeout(timeoutId);
-  }
+  const totalRials = results.reduce((sum, price) => sum + price, 0);
+  return { costToman: Math.ceil(totalRials / 10) };
 }
 

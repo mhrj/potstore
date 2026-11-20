@@ -11,6 +11,7 @@ const NAV = [
   { href: '/admin/articles', label: 'مقالات' },
   { href: '/admin/content', label: 'محتوای فروشگاه' },
   { href: '/admin/orders', label: 'سفارش‌ها' },
+  { href: '/admin/tapin-financial', label: 'مالی تاپین' },
   { href: '/admin/users', label: 'کاربران' },
   { href: '/admin/settings', label: 'تنظیمات' },
 ];

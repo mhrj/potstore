@@ -1,5 +1,8 @@
 export * from './tapin/locations';
 export * from './tapin/rates';
+export * from './tapin/boxes';
+export * from './tapin/register';
+export * from './tapin/financial';
 
 import {
   calculateTapinRate,
@@ -39,7 +42,7 @@ export async function calculateShippingRates({
         costToman: res.costToman,
         carrier: 'پست پیشتاز',
         carrierName: 'پست پیشتاز',
-        isFallback: res.isFallback,
+        isFallback: (res as { isFallback?: boolean }).isFallback,
       };
     }
   }

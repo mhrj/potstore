@@ -229,35 +229,20 @@ export async function POST(req: Request) {
   );
 
   // 5) Calculate shipping rate using Tapin Pishtaz Post provider
-  if (totals.totalWeightGrams > 30000) {
-    return NextResponse.json(
-      {
-        error: 'WEIGHT_LIMIT',
-        message:
-          'سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.',
-      },
-      { status: 400 },
-    );
-  }
-
   let shippingToman = 0;
   if (totals.payableToman < 5_000_000) {
     try {
       const rate = await calculateTapinRate(address, totals.lines);
       shippingToman = rate.costToman;
     } catch (err) {
-      if (err instanceof Error && err.message === 'WEIGHT_LIMIT_EXCEEDED') {
-        return NextResponse.json(
-          {
-            error: 'WEIGHT_LIMIT',
-            message:
-              'سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.',
-          },
-          { status: 400 },
-        );
-      }
-      console.warn('[payment/request] Tapin rate failed, falling back to pricing engine:', err);
-      shippingToman = calcShippingToman(totals, address.city || address.province);
+      console.error('[payment/request] Tapin rate failed:', err);
+      return NextResponse.json(
+        {
+          error: 'SHIPPING_CALCULATION_FAILED',
+          message: 'خطا در محاسبه هزینه ارسال. لطفاً دوباره تلاش کنید.',
+        },
+        { status: 400 },
+      );
     }
   }
 

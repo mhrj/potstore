@@ -27,35 +27,24 @@ export default async function CheckoutPage() {
     redirect('/cart');
   }
 
-  // Pre-calculate shipping rates with Tapin for all available addresses
+  // Pre-calculate shipping rate with Tapin for the active/default address
   const isFreeShipping = totals.payableToman >= 5_000_000;
   const initialShippingRates: Record<string, number> = {};
-  let initialWeightLimitError: string | null = null;
+  let initialShippingError: string | null = null;
 
-  if (totals.totalWeightGrams > 30000) {
-    initialWeightLimitError =
-      'سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.';
-  } else {
-    await Promise.all(
-      addresses.map(async (a) => {
-        if (isFreeShipping) {
-          initialShippingRates[a.id] = 0;
-          return;
-        }
-        try {
-          const rate = await calculateTapinRate(a, totals.lines);
-          initialShippingRates[a.id] = rate.costToman;
-        } catch (err) {
-          if (err instanceof Error && err.message === 'WEIGHT_LIMIT_EXCEEDED') {
-            initialWeightLimitError =
-              'سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.';
-            return;
-          }
-          console.warn(`[checkout] Tapin rate failed for address ${a.id}:`, err);
-          initialShippingRates[a.id] = calcShippingToman(totals, a.city || a.province);
-        }
-      }),
-    );
+  const activeAddress = addresses.find((a) => a.isDefault) ?? addresses[0];
+
+  if (activeAddress) {
+    if (isFreeShipping) {
+      initialShippingRates[activeAddress.id] = 0;
+    } else {
+      try {
+        const rate = await calculateTapinRate(activeAddress, totals.lines);
+        initialShippingRates[activeAddress.id] = rate.costToman;
+      } catch (_err) {
+        initialShippingError = 'خطا در محاسبه هزینه ارسال. لطفاً دوباره تلاش کنید.';
+      }
+    }
   }
 
   return (
@@ -83,7 +72,7 @@ export default async function CheckoutPage() {
           }))}
           totals={totals}
           initialShippingRates={initialShippingRates}
-          initialWeightLimitError={initialWeightLimitError}
+          initialShippingError={initialShippingError}
           locations={locations}
           provinces={locations}
         />

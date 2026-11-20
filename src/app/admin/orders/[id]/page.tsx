@@ -3,10 +3,11 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
 import { formatToman, formatDateFa, toFa } from '@/lib/format';
-import { OrderStatusBadge, OrderStatusForm } from '@/features/admin';
+import { OrderStatusBadge, OrderStatusForm, TapinPackagingForm } from '@/features/admin';
 import { StatusBadge, PrintInvoiceButton, BundleDetailsAccordion, OrderItemDetails, GroupedOrderItems } from '@/features/checkout';
 import { ItemColorBadge } from '@/features/catalog';
 import { isOrderStatus, ORDER_STATUS_LABELS, TIMELINE, formatCarrierName, getNextShippingDate } from '@/lib/orders';
+import { fetchTapinBoxes } from '@/lib/providers/shipping';
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -40,12 +41,19 @@ export default async function AdminOrderDetailPage({ params }: Props) {
       paymentStatus: true,
       createdAt: true,
       trackingCode: true,
+      barcode: true,
+      tapinOrderId: true,
+      trackingCodes: true,
+      barcodes: true,
+      tapinOrderIds: true,
+      packageConfigs: true,
       shippingCarrier: true,
       note: true,
       subtotalToman: true,
       discountToman: true,
       shippingToman: true,
       totalToman: true,
+      totalWeightGrams: true,
       channel: true,
       refId: true,
       paidAt: true,
@@ -81,6 +89,8 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           product: {
             select: {
               bundleItems: true,
+              weightGrams: true,
+              isFragile: true,
             },
           },
         },
@@ -92,6 +102,16 @@ export default async function AdminOrderDetailPage({ params }: Props) {
   const status = isOrderStatus(order.status) ? order.status : 'PENDING';
   const isCanceled = status === 'CANCELED';
   const currentIndex = (TIMELINE as readonly string[]).indexOf(status);
+
+  const totalItemsCount = order.items.reduce((sum, it) => sum + it.quantity, 0);
+  const totalWeightGrams =
+    order.totalWeightGrams && order.totalWeightGrams > 0
+      ? order.totalWeightGrams
+      : order.items.reduce(
+          (sum, it) => sum + (it.product?.weightGrams ?? 500) * it.quantity,
+          0,
+        );
+  const boxes = await fetchTapinBoxes();
 
   return (
     <div className="space-y-6 print:space-y-2 print:max-w-full print:p-0 print:m-0 invoice-container">
@@ -165,13 +185,73 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         </div>
       )}
 
-      {order.trackingCode && (
-        <p className="text-sm text-soil-700/80 dark:text-dust-200/80">
-          کد رهگیری {formatCarrierName(order.shippingCarrier)}:{' '}
-          <b className="font-mono text-soil-900 dark:text-dust-50" dir="ltr">
-            {toFa(order.trackingCode)}
-          </b>
-        </p>
+      {(order.trackingCode ||
+        order.barcode ||
+        (Array.isArray(order.trackingCodes) && order.trackingCodes.length > 0)) && (
+        <div className="space-y-3 print:space-y-1">
+          {Array.isArray(order.trackingCodes) && order.trackingCodes.length > 1 ? (
+            <div>
+              <span className="text-xs font-bold text-soil-700/80 dark:text-dust-200/80 mb-2 block">
+                اطلاعات بسته‌های ارسالی ({formatCarrierName(order.shippingCarrier)}):
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {(order.trackingCodes as string[]).map((code, idx) => {
+                  const barcode = Array.isArray(order.barcodes)
+                    ? (order.barcodes as string[])[idx]
+                    : null;
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-3 text-xs"
+                    >
+                      <div className="font-bold text-soil-900 dark:text-dust-50 mb-1.5 flex items-center justify-between border-b border-soil-900/5 dark:border-dust-50/10 pb-1">
+                        <span>بسته {toFa(idx + 1)}</span>
+                        <span className="text-[10px] text-soil-700/60 dark:text-dust-300/60">
+                          {formatCarrierName(order.shippingCarrier)}
+                        </span>
+                      </div>
+                      <div className="space-y-1 pt-0.5">
+                        <div className="flex justify-between items-center">
+                          <span className="text-soil-700/70 dark:text-dust-200/70">کد رهگیری:</span>
+                          <span className="font-mono font-bold text-soil-900 dark:text-dust-50" dir="ltr">
+                            {toFa(code)}
+                          </span>
+                        </div>
+                        {barcode && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-soil-700/70 dark:text-dust-200/70">بارکد پستی:</span>
+                            <span className="font-mono text-soil-900 dark:text-dust-50" dir="ltr">
+                              {toFa(barcode)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-6 text-sm text-soil-700/80 dark:text-dust-200/80">
+              {order.trackingCode && (
+                <p>
+                  کد رهگیری {formatCarrierName(order.shippingCarrier)}:{' '}
+                  <b className="font-mono text-soil-900 dark:text-dust-50" dir="ltr">
+                    {toFa(order.trackingCode)}
+                  </b>
+                </p>
+              )}
+              {order.barcode && (
+                <p>
+                  بارکد پستی:{' '}
+                  <b className="font-mono text-soil-900 dark:text-dust-50" dir="ltr">
+                    {toFa(order.barcode)}
+                  </b>
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2 print:grid print:grid-cols-3 print:gap-2 print:mt-2">
@@ -259,7 +339,36 @@ export default async function AdminOrderDetailPage({ params }: Props) {
         </section>
       </div>
 
-      <div className="print:hidden no-print">
+      <div className="print:hidden no-print space-y-6">
+        <TapinPackagingForm
+          orderId={order.id}
+          orderNumber={order.orderNumber}
+          orderStatus={order.status}
+          paymentStatus={order.paymentStatus}
+          initialTrackingCode={order.trackingCode}
+          initialBarcode={order.barcode}
+          initialTapinOrderId={order.tapinOrderId}
+          initialTrackingCodes={
+            Array.isArray(order.trackingCodes) ? (order.trackingCodes as string[]) : null
+          }
+          initialBarcodes={Array.isArray(order.barcodes) ? (order.barcodes as string[]) : null}
+          initialPackageConfigs={
+            Array.isArray(order.packageConfigs)
+              ? (order.packageConfigs as Array<{
+                  boxId: number;
+                  packageWeight?: number;
+                  weight?: number;
+                  trackingCode?: string;
+                  barcode?: string;
+                  orderId?: string;
+                }>)
+              : null
+          }
+          totalWeightGrams={totalWeightGrams}
+          totalItemsCount={totalItemsCount}
+          boxes={boxes}
+        />
+
         <OrderStatusForm
           orderId={order.id}
           initialStatus={order.status}

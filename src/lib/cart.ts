@@ -3,7 +3,16 @@ import { prisma } from '@/lib/prisma';
 import { priceCart, type CartTotals, type Tier } from '@/lib/pricing';
 import { parseBundleItems, parseColorOptions } from '@/lib/product-features';
 import { toFa } from '@/lib/format';
-import { parseBundleSelections, mergeBundleSelections } from '@/lib/bundle-colors';
+import {
+  parseBundleSelections,
+  mergeBundleSelections,
+  parseBundleConfigurations,
+  groupCartItems,
+  type GroupedCartItem,
+  type BundleConfiguration,
+} from '@/lib/bundle-colors';
+
+export { groupCartItems, type GroupedCartItem, type BundleConfiguration };
 
 export function getStockShortages(
   items: Array<{ name: string; quantity: number; stock: number }>,
@@ -129,6 +138,7 @@ export async function addToCart(
     select: {
       id: true,
       stock: true,
+      weightGrams: true,
       bundleSize: true,
       minOrderQuantity: true,
       colorOptions: true,
@@ -238,6 +248,11 @@ export async function addToCart(
     finalAdjustment = clientColorAdjustment;
   }
 
+  const bItems = parseBundleItems(product.bundleItems, product.stock);
+  const bundleItemsWeight = bItems.reduce((sum, item) => sum + (item.weightGrams || 0), 0);
+  const singleBundleWeight = bundleItemsWeight > 0 ? bundleItemsWeight : product.weightGrams;
+  const effectiveWeightGrams = isBundle ? singleBundleWeight : product.weightGrams;
+
   let jsonColorData: Prisma.InputJsonValue = (colorData as Prisma.InputJsonValue) ?? Prisma.JsonNull;
 
   if (isBundle && colorData) {
@@ -248,9 +263,27 @@ export async function addToCart(
       product.bundleItems,
     );
     if (selections.length > 0) {
+      const bundleConfigurations: BundleConfiguration[] = selections.map((s) => ({
+        bundleIndex: s.bundleIndex,
+        items: s.colors.map((c, i) => ({
+          title: bItems[i]?.title || `گلدان ${toFa(i + 1)}`,
+          color: c.name,
+          hex: c.hex,
+        })),
+      }));
+
       jsonColorData = {
         ...(typeof colorData === 'object' && colorData !== null ? colorData : {}),
+        weightGrams: effectiveWeightGrams,
+        singleBundleWeight: effectiveWeightGrams,
         bundleSelections: selections,
+        bundleConfigurations,
+      } as Prisma.InputJsonValue;
+    } else {
+      jsonColorData = {
+        ...(typeof colorData === 'object' && colorData !== null ? colorData : {}),
+        weightGrams: effectiveWeightGrams,
+        singleBundleWeight: effectiveWeightGrams,
       } as Prisma.InputJsonValue;
     }
   }
@@ -267,15 +300,32 @@ export async function addToCart(
       );
       const incomingBundleCount = Math.max(1, Math.floor(quantity / bundleSize));
       const incomingRaw =
+        (colorData as Record<string, unknown>)?.bundleConfigurations ||
         (colorData as Record<string, unknown>)?.bundleSelections ||
         (colorData as Record<string, unknown>)?.bundleColors ||
         colorData;
 
+      const incomingSelections = parseBundleSelections(
+        incomingRaw,
+        quantity,
+        bundleSize,
+        product.bundleItems,
+      );
+
       const mergedSelections = mergeBundleSelections(
         existingSelections,
-        incomingRaw,
+        incomingSelections.length > 0 ? incomingSelections : incomingRaw,
         incomingBundleCount,
       );
+
+      const mergedConfigurations: BundleConfiguration[] = mergedSelections.map((s) => ({
+        bundleIndex: s.bundleIndex,
+        items: s.colors.map((c, i) => ({
+          title: bItems[i]?.title || `گلدان ${toFa(i + 1)}`,
+          color: c.name,
+          hex: c.hex,
+        })),
+      }));
 
       const existingObj =
         typeof existing.colorData === 'object' && existing.colorData !== null
@@ -285,7 +335,10 @@ export async function addToCart(
       finalColorDataToSave = {
         ...existingObj,
         ...(typeof colorData === 'object' && colorData !== null ? colorData : {}),
+        weightGrams: effectiveWeightGrams,
+        singleBundleWeight: effectiveWeightGrams,
         bundleSelections: mergedSelections,
+        bundleConfigurations: mergedConfigurations,
       } as Prisma.InputJsonValue;
     }
 

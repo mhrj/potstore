@@ -16,3 +16,4 @@ export { default as StoreSettingsForm } from './components/StoreSettingsForm';
 export { default as TagRow } from './components/TagRow';
 export { default as UserManagementActions } from './components/UserManagementActions';
 export { default as VisitsChart } from './components/VisitsChart';
+export { TapinPackagingForm } from './components/TapinPackagingForm';

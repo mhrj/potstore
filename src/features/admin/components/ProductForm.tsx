@@ -944,19 +944,53 @@ export default function ProductForm({
               نمایش در صفحه اصلی
             </label>
           </div>
-          <div className="flex items-center gap-2">
+        </div>
+
+        {/* Fragile Product Toggle Card */}
+        <div className="mt-4">
+          <label
+            htmlFor="product-isFragile"
+            className={`flex items-start sm:items-center justify-between gap-4 p-3.5 rounded-2xl border transition-all cursor-pointer ${
+              form.isFragile
+                ? 'border-amber-500/60 bg-amber-500/10 dark:bg-amber-950/20 shadow-sm'
+                : 'border-soil-900/10 dark:border-dust-50/10 bg-dust-50/50 dark:bg-flora-950/40 hover:bg-dust-100/60 dark:hover:bg-flora-900/40'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div
+                className={`p-2 rounded-xl transition ${
+                  form.isFragile
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-soil-900/5 dark:bg-dust-50/10 text-soil-600 dark:text-dust-300'
+                }`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <span className="text-sm font-bold text-soil-900 dark:text-dust-50 block">
+                  کالای شکستنی است (نیاز به بسته‌بندی ویژه)
+                </span>
+                <span className="text-xs text-soil-600/80 dark:text-dust-300/80 block mt-0.5">
+                  با فعال‌سازی، سفارش با محتوای شکستنی (کد ۲) و پوشش بیمه تاپین ارسال می‌شود.
+                </span>
+              </div>
+            </div>
             <input
               id="product-isFragile"
               name="isFragile"
               type="checkbox"
               checked={form.isFragile ?? false}
               onChange={(e) => update('isFragile', e.target.checked)}
-              className="accent-flora-700"
+              className="accent-amber-600 size-5 cursor-pointer mt-1 sm:mt-0"
             />
-            <label htmlFor="product-isFragile" className="cursor-pointer">
-              شکستنی است (نیاز به بسته‌بندی ویژه)
-            </label>
-          </div>
+          </label>
         </div>
 
         {/* Package Dimensions */}

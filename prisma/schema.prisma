@@ -356,6 +356,12 @@ model Order {
 
   shippingCarrier String?
   trackingCode  String?
+  barcode       String?
+  tapinOrderId  String?
+  trackingCodes Json?
+  barcodes      Json?
+  tapinOrderIds Json?
+  packageConfigs Json?
   shippedAt     DateTime?
   deliveredAt   DateTime?
 

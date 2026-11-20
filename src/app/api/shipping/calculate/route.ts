@@ -11,6 +11,13 @@ import {
 
 export const runtime = "nodejs";
 
+type CacheEntry = {
+  expiresAt: number;
+  costToman: number;
+};
+
+const serverRateCache = new Map<string, CacheEntry>();
+
 export type ShippingOption = {
   carrier: string;
   label: string;
@@ -81,20 +88,6 @@ export async function POST(req: Request) {
 
   // 3) Get totals and check free shipping
   const totals = await getCartTotals(session.sub);
-
-  // Check Post Pishtaz weight limit (30 kg)
-  if (totals.totalWeightGrams > 30000) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "WEIGHT_LIMIT",
-        message:
-          "سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.",
-      },
-      { status: 400 },
-    );
-  }
-
   const isFree = totals.payableToman >= 5_000_000;
 
   let shippingToman = 0;
@@ -112,26 +105,30 @@ export async function POST(req: Request) {
       line2: address?.line2 ?? null,
     };
 
-    try {
-      const tapinResult = await calculateTapinRate(addressLike, totals.lines);
-      shippingToman = tapinResult.costToman;
-    } catch (error) {
-      if (error instanceof Error && error.message === "WEIGHT_LIMIT_EXCEEDED") {
+    const cacheKey = `${session.sub}:${resolvedProvinceCode ?? ''}:${resolvedCityCode ?? ''}:${totals.payableToman}:${totals.totalWeightGrams}`;
+    const now = Date.now();
+    const cached = serverRateCache.get(cacheKey);
+
+    if (cached && cached.expiresAt > now) {
+      shippingToman = cached.costToman;
+    } else {
+      try {
+        const tapinResult = await calculateTapinRate(addressLike, totals.lines);
+        shippingToman = tapinResult.costToman;
+        serverRateCache.set(cacheKey, {
+          expiresAt: now + 60_000,
+          costToman: shippingToman,
+        });
+      } catch (_error) {
         return NextResponse.json(
           {
             ok: false,
-            error: "WEIGHT_LIMIT",
-            message:
-              "سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.",
+            error: "SHIPPING_CALCULATION_FAILED",
+            message: "خطا در محاسبه هزینه ارسال. لطفاً دوباره تلاش کنید.",
           },
           { status: 400 },
         );
       }
-      console.warn(
-        "[shipping/calculate] Tapin rate failed, falling back to pricing engine:",
-        error,
-      );
-      shippingToman = calcShippingToman(totals, destinationProvince);
     }
   }
 

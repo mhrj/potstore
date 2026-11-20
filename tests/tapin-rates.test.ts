@@ -75,13 +75,17 @@ describe('Tapin Shipping Rates: buildTapinPriceCheckPayload', () => {
     assert.equal(payload.postal_code, '1234567890');
     assert.equal(payload.pay_type, '1');
     assert.equal(payload.order_type, '1');
-    // Actual weight: 800 * 2 + 300 = 1900g. Volumetric weight = 333 + 167 = 500g.
-    // Max is 1900g.
-    assert.equal(payload.package_weight, 1900);
-    assert.equal(payload.box_id, 1);
+    // Package weight represents only the empty cardboard box (500g)
+    assert.equal(payload.package_weight, 500);
+    assert.equal(payload.box_id, 5);
     assert.equal(payload.packet_type, 2);
-    assert.equal(payload.has_insurance, true);
-    assert.equal(payload.content_type, 2);
+    assert.equal(payload.has_insurance, false);
+    assert.equal(payload.pre_paid_price, 0);
+    assert.equal(payload.packaging_price, 0);
+    assert.equal(payload.non_standard_package, false);
+    assert.equal(payload.parcel_turning, true);
+    assert.equal(payload.kiosk_id, 0);
+    assert.equal(payload.duration, 48);
 
     assert.equal(payload.products.length, 2);
 
@@ -106,7 +110,32 @@ describe('Tapin Shipping Rates: buildTapinPriceCheckPayload', () => {
     });
   });
 
-  test('uses volumetric chargeable weight and disables insurance when not fragile', () => {
+  test('weight in products payload is the unit weight of a single product (8700g), NOT line weight (17400g)', () => {
+    const address: ShippingAddressLike = {
+      fullName: 'مشتری تست',
+      phone: '09121112233',
+      postalCode: '1234567890',
+      line1: 'تهران',
+    };
+
+    const items: ShippingItemLike[] = [
+      {
+        productName: 'ست دو عددی گلدان',
+        quantity: 2,
+        unitPriceToman: 200000,
+        weightGrams: 8700,
+        lineWeightGrams: 17400,
+      } as any,
+    ];
+
+    const payload = buildTapinPriceCheckPayload(address, items);
+    assert.equal(payload.products.length, 1);
+    assert.equal(payload.products[0].count, 2);
+    // MUST be unit weight (8700g), NOT 17400g
+    assert.equal(payload.products[0].weight, 8700);
+  });
+
+  test('package_weight is always 500g (empty box tare weight) across different items', () => {
     const address: ShippingAddressLike = {
       fullName: 'رضا کمالی',
       phone: '09121112233',
@@ -114,24 +143,25 @@ describe('Tapin Shipping Rates: buildTapinPriceCheckPayload', () => {
       line1: 'اصفهان',
     };
 
-    // Bulky light item: 500g, 30x30x30cm (volumetric = 4500g)
     const items: ShippingItemLike[] = [
       {
         productName: 'گلدان سبک بزرگ',
-        quantity: 1,
+        quantity: 2,
         unitPriceToman: 200000,
-        weightGrams: 500,
-        packageLengthCm: 30,
-        packageWidthCm: 30,
-        packageHeightCm: 30,
-        isFragile: false,
+        weightGrams: 600,
       },
     ];
 
     const payload = buildTapinPriceCheckPayload(address, items);
-    assert.equal(payload.package_weight, 4500);
+    assert.equal(payload.package_weight, 500);
+    assert.equal(payload.box_id, 5);
     assert.equal(payload.has_insurance, false);
-    assert.equal(payload.content_type, 2);
+    assert.equal(payload.pre_paid_price, 0);
+    assert.equal(payload.packaging_price, 0);
+    assert.equal(payload.non_standard_package, false);
+    assert.equal(payload.parcel_turning, true);
+    assert.equal(payload.kiosk_id, 0);
+    assert.equal(payload.duration, 48);
   });
 
   test('falls back to default first and last names if fullName is single word or empty', () => {
@@ -224,7 +254,7 @@ describe('Tapin Shipping Rates: calculateTapinRate network and conversion', () =
     assert.equal(result.costToman, 68500);
   });
 
-  test('returns fallback flat rate of 50,000 Toman when Tapin returns HTTP 200 with error status (e.g. 300 / 304)', async () => {
+  test('throws error when Tapin returns HTTP 200 with error status (e.g. 300 / 304)', async () => {
     globalThis.fetch = async () => {
       return new Response(
         JSON.stringify({
@@ -237,69 +267,95 @@ describe('Tapin Shipping Rates: calculateTapinRate network and conversion', () =
       );
     };
 
-    const result = await calculateTapinRate(
+    const items: any[] = [
       {
-        fullName: 'کاربر تست',
-        phone: '09120000000',
-        provinceCode: 8,
-        cityCode: 801,
-        postalCode: '1234567890',
-        line1: 'تهران',
+        id: 'test-pot-1',
+        productName: 'گلدان تستی',
+        quantity: 1,
+        priceToman: 100000,
+        weightGrams: 500,
       },
-      []
-    );
+    ];
 
-    assert.equal(result.costToman, FALLBACK_SHIPPING_COST_TOMAN);
-    assert.equal(result.costToman, 50000);
+    await assert.rejects(
+      async () => {
+        await calculateTapinRate(
+          {
+            fullName: 'کاربر تست',
+            phone: '09120000000',
+            provinceCode: 8,
+            cityCode: 801,
+            postalCode: '1234567890',
+            line1: 'تهران',
+          },
+          items
+        );
+      },
+      (err: Error) => {
+        assert.equal(err.message, 'description is required');
+        return true;
+      }
+    );
   });
 
-  test('returns fallback flat rate when fetch throws or times out', async () => {
+  test('throws error when fetch throws or times out without silent fallback', async () => {
     globalThis.fetch = async () => {
       throw new Error('Connection refused or timeout');
     };
 
-    const result = await calculateTapinRate(
+    const items: any[] = [
       {
-        fullName: 'کاربر تست',
-        phone: '09120000000',
-        provinceCode: 8,
-        cityCode: 801,
-        postalCode: '1234567890',
-        line1: 'تهران',
+        id: 'test-pot-1',
+        productName: 'گلدان تستی',
+        quantity: 1,
+        priceToman: 100000,
+        weightGrams: 500,
       },
-      []
-    );
+    ];
 
-    assert.equal(result.costToman, 50000);
+    await assert.rejects(
+      async () => {
+        await calculateTapinRate(
+          {
+            fullName: 'کاربر تست',
+            phone: '09120000000',
+            provinceCode: 8,
+            cityCode: 801,
+            postalCode: '1234567890',
+            line1: 'تهران',
+          },
+          items
+        );
+      },
+      (err: Error) => {
+        assert.equal(err.message, 'Connection refused or timeout');
+        return true;
+      }
+    );
   });
 
-  test('immediately falls back without calling fetch if provinceCode or cityCode is missing', async () => {
-    let fetchCalled = false;
-    globalThis.fetch = async () => {
-      fetchCalled = true;
-      return new Response('{}', { status: 200 });
+  test('chunks a 39kg heavy order into exactly 2 boxes in parallel and sums up the prices', async () => {
+    let callCount = 0;
+    const capturedPayloads: any[] = [];
+
+    globalThis.fetch = async (_url: any, init: any) => {
+      callCount++;
+      if (init?.body) {
+        capturedPayloads.push(JSON.parse(String(init.body)));
+      }
+      return new Response(
+        JSON.stringify({
+          returns: { status: 200, message: 'OK' },
+          entries: {
+            total_price: 450000, // 450,000 Rials each box
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
     };
 
-    const result = await calculateTapinRate(
-      {
-        fullName: 'کاربر بدون کد',
-        phone: '09120000000',
-        provinceCode: null,
-        cityCode: null,
-        postalCode: '1234567890',
-        line1: 'تهران',
-      },
-      []
-    );
-
-    assert.equal(fetchCalled, false);
-    assert.equal(result.costToman, 50000);
-    assert.equal(result.isFallback, true);
-  });
-
-  test('throws WEIGHT_LIMIT_EXCEEDED when total weight exceeds 30,000 grams', async () => {
     const address: ShippingAddressLike = {
-      fullName: 'کاربر سنگین',
+      fullName: 'کاربر سفارش حجیم',
       phone: '09120000000',
       provinceCode: 8,
       cityCode: 801,
@@ -307,13 +363,76 @@ describe('Tapin Shipping Rates: calculateTapinRate network and conversion', () =
       line1: 'تهران',
     };
 
-    // 56.7 kg order
-    const items: ShippingItemLike[] = [
+    // 39 units of 1,000g = 39,000g -> splits into Box 1 (28 units) and Box 2 (11 units)
+    const items: any[] = [
       {
-        productName: 'سفارش سنگین گلدان',
-        quantity: 56,
-        unitPriceToman: 100000,
-        weightGrams: 1012, // 56 * 1012 = 56,672g > 30,000g
+        id: 'bulk-pot',
+        productName: 'گلدان عمده',
+        quantity: 39,
+        priceToman: 100000,
+        weightGrams: 1000,
+      },
+    ];
+
+    const result = await calculateTapinRate(address, items);
+
+    // Exactly 2 parallel calls executed
+    assert.equal(callCount, 2);
+    assert.equal(capturedPayloads.length, 2);
+
+    // Each box has package_weight: 1500 (1.5kg empty box tare)
+    assert.equal(capturedPayloads[0].package_weight, 1500);
+    assert.equal(capturedPayloads[1].package_weight, 1500);
+
+    // Box 1 has 28 units (28,000g), Box 2 has 11 units (11,000g)
+    assert.equal(capturedPayloads[0].products[0].count, 28);
+    assert.equal(capturedPayloads[1].products[0].count, 11);
+
+    // Total quantity strictly conserved: 28 + 11 = 39
+    assert.equal(capturedPayloads[0].products[0].count + capturedPayloads[1].products[0].count, 39);
+
+    // Sum: 450,000 + 450,000 = 900,000 Rials = 90,000 Toman
+    assert.equal(result.costToman, 90000);
+  });
+
+  test('throws error if ANY of the parallel multi-box calls fails', async () => {
+    let callIndex = 0;
+    globalThis.fetch = async () => {
+      callIndex++;
+      if (callIndex === 2) {
+        // Second box fails
+        return new Response(
+          JSON.stringify({
+            returns: { status: 500, message: 'Tapin internal server error' },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          returns: { status: 200, message: 'OK' },
+          entries: { total_price: 400000 },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    };
+
+    const address: ShippingAddressLike = {
+      fullName: 'کاربر تست خطا',
+      phone: '09120000000',
+      provinceCode: 8,
+      cityCode: 801,
+      postalCode: '1234567890',
+      line1: 'تهران',
+    };
+
+    const items: any[] = [
+      {
+        id: 'bulk-pot',
+        productName: 'گلدان عمده',
+        quantity: 50,
+        priceToman: 100000,
+        weightGrams: 1000, // 50,000g -> 2 boxes
       },
     ];
 
@@ -322,10 +441,91 @@ describe('Tapin Shipping Rates: calculateTapinRate network and conversion', () =
         await calculateTapinRate(address, items);
       },
       (err: Error) => {
-        assert.equal(err.message, 'WEIGHT_LIMIT_EXCEEDED');
+        assert.equal(err.message, 'Tapin internal server error');
         return true;
       }
     );
   });
-});
 
+  test('preserves distinct product counts across multiple boxes (4 heavy pots and 3 medium pots)', async () => {
+    let callCount = 0;
+    const capturedPayloads: any[] = [];
+
+    globalThis.fetch = async (_url: any, init: any) => {
+      callCount++;
+      if (init?.body) {
+        capturedPayloads.push(JSON.parse(String(init.body)));
+      }
+      return new Response(
+        JSON.stringify({
+          returns: { status: 200, message: 'OK' },
+          entries: {
+            total_price: 350000,
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    };
+
+    const address: ShippingAddressLike = {
+      fullName: 'کاربر تست پات',
+      phone: '09120000000',
+      provinceCode: 8,
+      cityCode: 801,
+      postalCode: '1234567890',
+      line1: 'تهران',
+    };
+
+    // 4 heavy pots (8000g each) + 3 medium pots (5000g each)
+    // Box 1 (max 29,000g): 3 heavy pots = 24,000g + 500g tare = 24,500g (remaining: 4,500g)
+    // 4th heavy pot (8000g) and medium pots (5000g) cannot fit in Box 1.
+    // Box 2: 1 heavy pot (8000g) + 3 medium pots (15000g) + 500g tare = 23,500g
+    // Result: Box 1 = [3 heavy pots], Box 2 = [1 heavy pot, 3 medium pots]
+    const items: any[] = [
+      {
+        id: 'heavy-pot',
+        productName: 'گلدان سنگین',
+        quantity: 4,
+        priceToman: 150000,
+        weightGrams: 8000,
+      },
+      {
+        id: 'medium-pot',
+        productName: 'گلدان متوسط',
+        quantity: 3,
+        priceToman: 50000,
+        weightGrams: 5000,
+      },
+    ];
+
+    const result = await calculateTapinRate(address, items);
+
+    // Exactly 2 API calls
+    assert.equal(callCount, 2);
+    assert.equal(capturedPayloads.length, 2);
+
+    // Box 1: exactly 3 heavy pots
+    assert.equal(capturedPayloads[0].products.length, 1);
+    const box1Heavy = capturedPayloads[0].products.find((p: any) => p.title === 'گلدان سنگین');
+    assert.ok(box1Heavy);
+    assert.equal(box1Heavy.count, 3);
+
+    // Box 2: exactly 1 heavy pot and 3 medium pots
+    assert.equal(capturedPayloads[1].products.length, 2);
+    const box2Heavy = capturedPayloads[1].products.find((p: any) => p.title === 'گلدان سنگین');
+    const box2Medium = capturedPayloads[1].products.find((p: any) => p.title === 'گلدان متوسط');
+    assert.ok(box2Heavy);
+    assert.ok(box2Medium);
+    assert.equal(box2Heavy.count, 1);
+    assert.equal(box2Medium.count, 3);
+
+    // Total heavy pots strictly equal to 4 (NOT duplicated or overlapping)
+    assert.equal(box1Heavy.count + box2Heavy.count, 4);
+
+    // Total medium pots strictly equal to 3
+    assert.equal(box2Medium.count, 3);
+
+    // Sum of 2 boxes: 350,000 + 350,000 = 700,000 Rials = 70,000 Toman
+    assert.equal(result.costToman, 70000);
+  });
+});

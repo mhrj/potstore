@@ -210,8 +210,14 @@ export function priceLine({
   const bundleCount = isBundle ? Math.max(1, Math.round(qty / bundleSize)) : qty;
   const baseUnitPrice = Math.round(effectiveBasePrice / bundleSize);
   const listUnitToman = isBundle ? baseUnitPrice : effectiveBasePrice;
-  const singleBundleWeight = isBundle && product.bundleItems && product.bundleItems.length > 0
-    ? (product.bundleItems.reduce((sum, item) => sum + (item.weightGrams || 0), 0) || product.weightGrams)
+  const singleBundleWeight = isBundle
+    ? (product.bundleItems && product.bundleItems.length > 0
+        ? product.bundleItems.reduce((sum, item) => sum + (item.weightGrams || 0), 0)
+        : 0) ||
+      (typeof (colorData as Record<string, unknown>)?.weightGrams === 'number' &&
+      Number((colorData as Record<string, unknown>).weightGrams) > 0
+        ? Number((colorData as Record<string, unknown>).weightGrams)
+        : product.weightGrams)
     : product.weightGrams;
   const lineWeightGrams = isBundle ? singleBundleWeight * bundleCount : product.weightGrams * qty;
   const cartons = Math.ceil(qty / Math.max(1, product.unitsPerCarton ?? 1));

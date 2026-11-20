@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { logApiCall } from "@/lib/api-logger";
 
 export type TapinCity = {
   code: number;
@@ -96,9 +97,9 @@ export async function fetchTapinLocations(): Promise<TapinProvince[]> {
     }
 
     const data = await res.json();
+    logApiCall("tapin", "/api/v2/public/state/tree/", {}, data);
     return transformTapinLocationResponse(data);
   } catch (error) {
-    console.error("TAPIN API FETCH FAILED:", error);
     if (
       error instanceof Error &&
       error.message.startsWith("Tapin API error:")

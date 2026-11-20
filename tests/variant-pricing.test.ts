@@ -149,3 +149,69 @@ test('calculateTotalStock: dynamic stock from variants and color options', async
   });
 });
 
+test('Bundle Weight Calculation: Cart with 2 bundles (8700g each) + 2 standalone pots (1500g each) equals 20.4kg', () => {
+  // Ceramic pot bundle (bundleSize: 2, 2 items inside: 4350g + 4350g = 8700g)
+  const ceramicBundleProduct = {
+    id: 'bundle-ceramic-1',
+    slug: 'ceramic-pot-bundle-2',
+    name: 'ست دو عددی گلدان سرامیکی',
+    basePriceToman: 250_000,
+    weightGrams: 4350, // base single pot weight in DB
+    bundleSize: 2,
+    bundleItems: [
+      {
+        title: 'گلدان سرامیکی ۱',
+        material: 'سرامیک',
+        diameterCm: 20,
+        heightCm: 18,
+        weightGrams: 4350,
+      },
+      {
+        title: 'گلدان سرامیکی ۲',
+        material: 'سرامیک',
+        diameterCm: 18,
+        heightCm: 16,
+        weightGrams: 4350,
+      },
+    ],
+  };
+
+  // Standalone concrete pot (1500g each)
+  const concretePotProduct = {
+    id: 'concrete-pot-1',
+    slug: 'concrete-pot-small',
+    name: 'گلدان بتنی کوچک',
+    basePriceToman: 90_000,
+    weightGrams: 1500,
+    bundleSize: 1,
+  };
+
+  const tiers: Tier[] = [{ minQuantity: 1, unitPriceToman: 250_000, label: 'تک‌فروشی' }];
+  const singleTiers: Tier[] = [{ minQuantity: 1, unitPriceToman: 90_000, label: 'تک‌فروشی' }];
+
+  // User buys 2 bundles (quantity 4 in pot units) + 2 small concrete pots
+  const totals = priceCart([
+    {
+      product: ceramicBundleProduct,
+      tiers,
+      quantity: 4, // 2 bundles of size 2
+    },
+    {
+      product: concretePotProduct,
+      tiers: singleTiers,
+      quantity: 2, // 2 standalone pots
+    },
+  ]);
+
+  // Line 1: 2 bundles * 8,700g = 17,400g
+  assert.equal(totals.lines[0].weightGrams, 8700);
+  assert.equal(totals.lines[0].lineWeightGrams, 17400);
+
+  // Line 2: 2 pots * 1,500g = 3,000g
+  assert.equal(totals.lines[1].weightGrams, 1500);
+  assert.equal(totals.lines[1].lineWeightGrams, 3000);
+
+  // Grand total weight: 17,400 + 3,000 = 20,400g = 20.4 kg
+  assert.equal(totals.totalWeightGrams, 20400);
+});
+

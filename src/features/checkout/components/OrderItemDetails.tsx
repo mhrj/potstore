@@ -4,6 +4,7 @@ import { ItemColorBadge, resolveColorName } from '@/features/catalog';
 import BundleDetailsAccordion from './BundleDetailsAccordion';
 import { parseBundleItems } from '@/lib/product-features';
 import OrderItemCard from '@/components/ui/OrderItemCard';
+import { groupCartItems, type GroupedCartItem } from '@/lib/bundle-colors';
 
 export type OrderItemDetailsItem = {
   id?: string;
@@ -443,6 +444,18 @@ export function buildProductBreakdownSummary(items: OrderItemDetailsItem[]): str
       parts.push(colorName);
     } else if (item.variantTitle) {
       parts.push(item.variantTitle);
+    } else if (isBundle) {
+      const grp = groupCartItems([item])[0];
+      if (grp && grp.kind === 'bundle') {
+        if (grp.type === 'identical') {
+          const colors = grp.config.items.map((it) => it.color).join(' + ');
+          if (colors && !colors.includes('پیش‌فرض')) {
+            parts.push(`(${colors})`);
+          }
+        } else if (grp.type === 'mixed') {
+          parts.push('با رنگ‌بندی متفاوت');
+        }
+      }
     }
     const descriptor = parts.join(' ');
     const key = `${unitLabel}:::${descriptor}`;
@@ -555,159 +568,26 @@ export function OrderItemGroup({
   linkTargetBlank = false,
   showAccordion = true,
 }: {
-  group: GroupedOrderProduct;
+  group: GroupedCartItem | Record<string, unknown>;
   compact?: boolean;
   className?: string;
   linkTargetBlank?: boolean;
   showAccordion?: boolean;
 }) {
-  if (compact) {
-    return (
-      <div className={`py-3 text-xs space-y-2 ${className}`}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1 space-y-1.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-soil-900 dark:text-dust-50 text-xs sm:text-sm">
-                {group.name}
-              </span>
-              {group.breakdownSummary && (
-                <span className="text-[11px] text-soil-700/75 dark:text-dust-200/75 font-medium">
-                  ({group.breakdownSummary})
-                </span>
-              )}
-              {group.isBundle && (
-                <span className="rounded-md bg-flora-100 dark:bg-flora-950 px-1.5 py-0.5 text-[10px] font-bold text-flora-700 dark:text-flora-300 border border-flora-300 dark:border-flora-700">
-                  ست {toFa(group.bundleSize || 1)} عددی
-                </span>
-              )}
-            </div>
-
-            {group.specs && (
-              <p className="text-[11px] text-soil-700/70 dark:text-dust-200/70">
-                {group.specs}
-              </p>
-            )}
-
-            {/* Sub-rows for variants */}
-            <div className="space-y-1.5 mt-1 ps-2 border-s-2 border-flora-500/30 dark:border-flora-400/20">
-              {group.items.map((subItem, idx) => (
-                <OrderItemCard
-                  key={subItem.id ?? idx}
-                  item={subItem}
-                  compact={true}
-                  showImage={false}
-                  linkTargetBlank={linkTargetBlank}
-                />
-              ))}
-            </div>
-
-            {/* Group total */}
-            <div className="pt-1.5 text-[11px] flex justify-between font-bold text-soil-900 dark:text-dust-50 border-t border-soil-900/5 dark:border-dust-50/10">
-              <span>مجموع:</span>
-              <span className="text-flora-900 dark:text-flora-300 font-black">
-                {formatToman(group.totalToman)} تومان
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  const grp = (group as Record<string, unknown>)?.kind
+    ? (group as unknown as GroupedCartItem)
+    : groupCartItems(
+        ((group as Record<string, unknown>)?.items as OrderItemDetailsItem[]) ||
+          ((group as Record<string, unknown>)?.lines as OrderItemDetailsItem[]) ||
+          [group as unknown as OrderItemDetailsItem],
+      )[0];
   return (
-    <div
-      className={`flex flex-col gap-4 py-4 sm:flex-row sm:items-start sm:justify-between print:flex-row print:items-start print:justify-between print:py-2 print:gap-3 print:break-inside-avoid ${className}`}
-    >
-      <div className="flex items-start gap-4 print:gap-2 flex-1 min-w-0">
-        {/* Product image shown once */}
-        {group.imageUrl ? (
-          <img
-            src={group.imageUrl}
-            alt={group.name}
-            className="w-20 h-20 rounded-xl object-cover shrink-0 border border-soil-900/10 dark:border-dust-50/10 shadow-2xs dark:shadow-none print:w-12 print:h-12 print:rounded-md"
-          />
-        ) : (
-          <div className="w-20 h-20 rounded-xl bg-dust-100 dark:bg-flora-950 border border-soil-900/10 dark:border-dust-50/10 flex items-center justify-center text-soil-700/40 dark:text-dust-400 shrink-0 print:w-12 print:h-12 print:rounded-md">
-            <svg className="w-7 h-7 print:w-5 print:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
-        )}
-
-        <div className="space-y-2 flex-1 min-w-0 print:space-y-1 print:text-[10px]">
-          <div className="flex items-center gap-2 flex-wrap">
-            {group.slug ? (
-              <Link
-                href={`/products/${group.slug}`}
-                target={linkTargetBlank ? '_blank' : undefined}
-                rel={linkTargetBlank ? 'noopener noreferrer' : undefined}
-                className="font-bold text-soil-900 dark:text-dust-50 hover:text-flora-700 dark:hover:text-flora-300 transition text-base print:text-xs"
-              >
-                {group.name}
-              </Link>
-            ) : (
-              <span className="font-bold text-soil-900 dark:text-dust-50 text-base print:text-xs">
-                {group.name}
-              </span>
-            )}
-
-            {group.breakdownSummary && (
-              <span className="text-xs text-soil-700/80 dark:text-dust-200/80 font-medium print:text-[10px]">
-                ({group.breakdownSummary})
-              </span>
-            )}
-
-            {group.isBundle && (
-              <span className="inline-flex items-center rounded-md bg-flora-100 dark:bg-flora-950 px-2 py-0.5 text-[11px] font-bold text-flora-700 dark:text-flora-300 border border-flora-300 dark:border-flora-700 print:text-[9px]">
-                شامل {toFa(group.bundleSize || 1)} عدد گلدان
-              </span>
-            )}
-          </div>
-
-          {group.sku && (
-            <p className="text-xs text-soil-700/60 dark:text-dust-200/60 print:text-[9px]">
-              کد کالا:{' '}
-              <span className="font-mono font-medium" dir="ltr">
-                {group.sku}
-              </span>
-            </p>
-          )}
-
-          {group.specs && (
-            <p className="text-xs text-soil-700/75 dark:text-dust-200/75 print:text-[9px]">
-              {group.specs}
-            </p>
-          )}
-
-          {/* Sub-rows for each variant */}
-          <div className="rounded-xl bg-dust-50/80 dark:bg-flora-950/40 border border-soil-900/5 dark:border-dust-50/5 p-3 space-y-2 print:p-1 print:bg-transparent print:border-none print:space-y-1">
-            {group.items.map((subItem, idx) => (
-              <OrderItemCard
-                key={subItem.id ?? idx}
-                item={subItem}
-                showImage={false}
-                linkTargetBlank={linkTargetBlank}
-              />
-            ))}
-          </div>
-
-          {/* Group Total row */}
-          <div className="flex items-center justify-between pt-1 text-xs print:text-[10px]">
-            <span className="font-bold text-soil-700/80 dark:text-dust-200/80">
-              مجموع:
-            </span>
-            <span className="font-black text-sm text-flora-900 dark:text-flora-300 print:text-xs">
-              {formatToman(group.totalToman)} تومان
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <OrderItemCard
+      group={grp}
+      compact={compact}
+      className={className}
+      linkTargetBlank={linkTargetBlank}
+    />
   );
 }
 
@@ -724,19 +604,18 @@ export function GroupedOrderItems({
   linkTargetBlank?: boolean;
   showAccordion?: boolean;
 }) {
-  const groups = groupOrderItems(items);
+  const groups = groupCartItems(items);
 
   if (groups.length === 0) return null;
 
   return (
     <div className={`divide-y divide-soil-900/10 dark:divide-dust-50/10 ${className}`}>
       {groups.map((group) => (
-        <OrderItemGroup
+        <OrderItemCard
           key={group.productId}
           group={group}
           compact={compact}
           linkTargetBlank={linkTargetBlank}
-          showAccordion={showAccordion}
         />
       ))}
     </div>

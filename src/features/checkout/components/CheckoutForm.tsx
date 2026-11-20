@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AddressForm, { type AddressRecord } from "@/features/checkout/components/AddressForm";
 import type { TapinProvince } from "@/lib/providers/shipping/tapin/locations";
 import { calcShippingToman, type CartTotals } from "@/lib/pricing";
@@ -54,14 +54,14 @@ export default function CheckoutForm({
   addresses,
   totals,
   initialShippingRates = {},
-  initialWeightLimitError = null,
+  initialShippingError = null,
   locations,
   provinces,
 }: {
   addresses: Address[];
   totals: CartTotals;
   initialShippingRates?: Record<string, number>;
-  initialWeightLimitError?: string | null;
+  initialShippingError?: string | null;
   locations?: TapinProvince[];
   provinces?: TapinProvince[];
 }) {
@@ -73,7 +73,7 @@ export default function CheckoutForm({
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const selectedCarrier = "پست پیشتاز";
   const [calculatingShipping, setCalculatingShipping] = useState(false);
-  const [weightLimitError, setWeightLimitError] = useState<string | null>(initialWeightLimitError ?? null);
+  const [shippingError, setShippingError] = useState<string | null>(initialShippingError ?? null);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,74 +111,130 @@ export default function CheckoutForm({
     };
   }, [addressList, editingAddressId]);
 
-  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>(
-    () => {
-      const initialCost =
-        initialShippingRates[selectedId] ??
-        calcShippingToman(totals, selectedAddress?.province ?? "تهران");
-      return getDefaultShippingOptions(initialCost);
-    },
+  // Stable cart signature to avoid re-fetching when cart items and totals have not changed
+  const cartSignature = useMemo(() => {
+    return `${totals.payableToman}_${totals.totalWeightGrams}_${totals.lines.length}`;
+  }, [totals.payableToman, totals.totalWeightGrams, totals.lines.length]);
+
+  // Client-side in-memory cache for shipping options by address and cart signature
+  const shippingCacheRef = useRef<Map<string, { options: ShippingOption[]; error: string | null }>>(
+    new Map(),
   );
 
-  // Dynamic Postex shipping calculation whenever selected address or weight changes
+  // In-flight request tracker to prevent duplicate concurrent API calls
+  const inFlightKeyRef = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>(() => {
+    if (initialShippingError) {
+      return [];
+    }
+    const initialCost =
+      initialShippingRates[selectedId] ??
+      calcShippingToman(totals, selectedAddress?.province ?? "تهران");
+    const defaultOpts = getDefaultShippingOptions(initialCost);
+
+    // Pre-seed cache with initial rates to eliminate redundant client fetch on mount
+    if (initialShippingRates[selectedId] !== undefined) {
+      shippingCacheRef.current.set(`${selectedId}_${cartSignature}`, {
+        options: defaultOpts,
+        error: null,
+      });
+    }
+
+    return defaultOpts;
+  });
+
+  // Dynamic Tapin shipping calculation whenever selected address or cart weight changes
   useEffect(() => {
     if (!selectedAddress) return;
 
-    let cancelled = false;
+    const cacheKey = `${selectedAddress.id}_${cartSignature}`;
+
+    // 1) If already cached, apply immediately without network call
+    const cached = shippingCacheRef.current.get(cacheKey);
+    if (cached) {
+      setShippingOptions(cached.options);
+      setShippingError(cached.error);
+      setCalculatingShipping(false);
+      return;
+    }
+
+    // 2) If an identical request is already in-flight, do not fire another one
+    if (inFlightKeyRef.current === cacheKey) {
+      return;
+    }
+
+    // 3) Cancel any previous in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    inFlightKeyRef.current = cacheKey;
+
     setCalculatingShipping(true);
 
-    fetch("/api/shipping/calculate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        cityCode: selectedAddress.cityCode,
-        provinceCode: selectedAddress.provinceCode,
-        weightGrams: totals.totalWeightGrams,
-        addressId: selectedAddress.id,
-        city: selectedAddress.city,
-        province: selectedAddress.province,
-      }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) {
-          if (data?.error === "WEIGHT_LIMIT" || data?.message?.includes("۳۰ کیلوگرم")) {
-            setWeightLimitError(
-              data.message ||
-                "سفارش شما بیش از ۳۰ کیلوگرم است و امکان ارسال با پست پیشتاز وجود ندارد. لطفاً سفارش خود را به دو بخش تقسیم کنید یا با پشتیبانی تماس بگیرید.",
-            );
-            return;
-          }
-          setWeightLimitError(null);
-          if (data?.ok) {
-            const opts = data.shippingOptions ?? data.options;
-            if (Array.isArray(opts) && opts.length > 0) {
-              setShippingOptions(opts);
+    // 4) Small debounce timer (100ms) to batch rapid address clicks
+    const timer = setTimeout(() => {
+      fetch("/api/shipping/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cityCode: selectedAddress.cityCode,
+          provinceCode: selectedAddress.provinceCode,
+          weightGrams: totals.totalWeightGrams,
+          addressId: selectedAddress.id,
+          city: selectedAddress.city,
+          province: selectedAddress.province,
+        }),
+        signal: controller.signal,
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (!controller.signal.aborted) {
+            if (data?.ok) {
+              setShippingError(null);
+              const opts = data.shippingOptions ?? data.options;
+              const resolvedOpts = Array.isArray(opts) && opts.length > 0 ? opts : [];
+              setShippingOptions(resolvedOpts);
+              shippingCacheRef.current.set(cacheKey, { options: resolvedOpts, error: null });
+            } else {
+              const errMsg =
+                data?.message || "خطا در محاسبه هزینه ارسال. لطفاً دوباره تلاش کنید.";
+              setShippingError(errMsg);
+              setShippingOptions([]);
+              shippingCacheRef.current.set(cacheKey, { options: [], error: errMsg });
             }
           }
-        }
-      })
-      .catch((err) => {
-        console.warn(
-          "[checkout] Failed to recalculate shipping, using fallback:",
-          err,
-        );
-        const fallbackCost = calcShippingToman(
-          totals,
-          selectedAddress.province ?? "تهران",
-        );
-        setShippingOptions(getDefaultShippingOptions(fallbackCost));
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setCalculatingShipping(false);
-        }
-      });
+        })
+        .catch((err) => {
+          if (!controller.signal.aborted && err?.name !== "AbortError") {
+            const errMsg = "خطا در محاسبه هزینه ارسال. لطفاً دوباره تلاش کنید.";
+            setShippingError(errMsg);
+            setShippingOptions([]);
+            shippingCacheRef.current.set(cacheKey, { options: [], error: errMsg });
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) {
+            setCalculatingShipping(false);
+          }
+          if (inFlightKeyRef.current === cacheKey) {
+            inFlightKeyRef.current = null;
+          }
+        });
+    }, 100);
 
     return () => {
-      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+      if (inFlightKeyRef.current === cacheKey) {
+        inFlightKeyRef.current = null;
+      }
     };
-  }, [selectedAddress, totals.totalWeightGrams]);
+  }, [selectedAddress?.id, cartSignature, selectedAddress?.cityCode, selectedAddress?.provinceCode]);
 
   const selectedOption = useMemo(() => {
     return (
@@ -205,8 +261,8 @@ export default function CheckoutForm({
   };
 
   const pay = async () => {
-    if (weightLimitError) {
-      setError(weightLimitError);
+    if (shippingError) {
+      setError(shippingError);
       return;
     }
     if (!selectedId) {
@@ -384,14 +440,14 @@ export default function CheckoutForm({
             روش ارسال مرسوله خود را انتخاب کنید:
           </p>
 
-          {weightLimitError ? (
+          {shippingError ? (
             <div
               role="alert"
-              className="rounded-2xl border border-red-300 dark:border-red-800/80 bg-red-50 dark:bg-red-950/60 p-4 text-xs text-red-800 dark:text-red-200 space-y-3 shadow-xs"
+              className="rounded-2xl border border-red-300 dark:border-red-800/80 bg-red-50 dark:bg-red-950/60 p-4 text-xs text-red-800 dark:text-red-200 space-y-2 shadow-xs"
             >
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <svg
-                  className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5"
+                  className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -403,27 +459,11 @@ export default function CheckoutForm({
                     d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                   />
                 </svg>
-                <div className="flex-1 leading-relaxed">
+                <div className="flex-1">
                   <p className="font-bold text-sm text-red-900 dark:text-red-100">
-                    محدودیت وزن پست پیشتاز (حداکثر ۳۰ کیلوگرم)
+                    {shippingError}
                   </p>
-                  <p className="mt-1 font-medium">{weightLimitError}</p>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 pt-2.5 border-t border-red-200/80 dark:border-red-800/40 text-xs font-bold">
-                <a
-                  href="/about#contact"
-                  className="inline-flex items-center gap-1.5 text-red-800 dark:text-red-300 hover:text-red-950 dark:hover:text-red-100 underline underline-offset-4"
-                >
-                  تماس با پشتیبانی
-                </a>
-                <span className="text-red-300 dark:text-red-700">|</span>
-                <a
-                  href="/cart"
-                  className="inline-flex items-center gap-1.5 text-red-800 dark:text-red-300 hover:text-red-950 dark:hover:text-red-100 underline underline-offset-4"
-                >
-                  ویرایش و کاهش اقلام سبد خرید
-                </a>
               </div>
             </div>
           ) : calculatingShipping ? (
@@ -450,38 +490,47 @@ export default function CheckoutForm({
               <p className="text-xs">در حال محاسبه هزینه ارسال…</p>
             </div>
           ) : (
-            <ul className="space-y-2.5">
-              {(shippingOptions.filter((opt) => opt.carrier === 'پست پیشتاز').length > 0
-                ? shippingOptions.filter((opt) => opt.carrier === 'پست پیشتاز')
-                : getDefaultShippingOptions(effectiveShippingToman)
-              ).map((opt, idx) => (
-                <li key={opt.carrier}>
-                  <div className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-flora-500 bg-flora-100/40 dark:bg-flora-900/60 p-3.5 shadow-2xs ring-1 ring-flora-500/20 dark:ring-flora-500/30">
-                    <div className="flex items-center gap-3">
-                      <input
-                        id={`carrier-${idx}`}
-                        type="radio"
-                        name="shippingCarrier"
-                        value={opt.carrier || "پست پیشتاز"}
-                        checked={true}
-                        readOnly
-                        className="accent-flora-700"
-                      />
-                      <label htmlFor={`carrier-${idx}`} className="text-xs sm:text-sm font-bold text-soil-900 dark:text-dust-50 cursor-pointer">
-                        {opt.label || 'پست پیشتاز'}
-                      </label>
+            <div className="space-y-3">
+              <ul className="space-y-2.5">
+                {(shippingOptions.filter((opt) => opt.carrier === 'پست پیشتاز').length > 0
+                  ? shippingOptions.filter((opt) => opt.carrier === 'پست پیشتاز')
+                  : getDefaultShippingOptions(effectiveShippingToman)
+                ).map((opt, idx) => (
+                  <li key={opt.carrier}>
+                    <div className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-flora-500 bg-flora-100/40 dark:bg-flora-900/60 p-3.5 shadow-2xs ring-1 ring-flora-500/20 dark:ring-flora-500/30">
+                      <div className="flex items-center gap-3">
+                        <input
+                          id={`carrier-${idx}`}
+                          type="radio"
+                          name="shippingCarrier"
+                          value={opt.carrier || "پست پیشتاز"}
+                          checked={true}
+                          readOnly
+                          className="accent-flora-700"
+                        />
+                        <label htmlFor={`carrier-${idx}`} className="text-xs sm:text-sm font-bold text-soil-900 dark:text-dust-50 cursor-pointer">
+                          {opt.label || 'پست پیشتاز'}
+                        </label>
+                      </div>
+                      <span className="text-xs sm:text-sm font-black text-soil-900 dark:text-dust-50 shrink-0">
+                        {opt.costToman === 0 ? (
+                          <span className="text-flora-700 dark:text-flora-300">رایگان</span>
+                        ) : (
+                          formatToman(opt.costToman)
+                        )}
+                      </span>
                     </div>
-                    <span className="text-xs sm:text-sm font-black text-soil-900 dark:text-dust-50 shrink-0">
-                      {opt.costToman === 0 ? (
-                        <span className="text-flora-700 dark:text-flora-300">رایگان</span>
-                      ) : (
-                        formatToman(opt.costToman)
-                      )}
-                    </span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  </li>
+                ))}
+              </ul>
+
+              {totals.totalWeightGrams > 60000 && (
+                <div className="rounded-xl border border-flora-200 bg-flora-50 p-4 text-sm text-flora-800 dark:border-flora-800 dark:bg-flora-900/50 dark:text-flora-200">
+                  <p>برای سفارش‌های بالای ۶۰ کیلوگرم، استفاده از بخش هماهنگی سازمانی (B2B) به‌صرفه‌تر است.</p>
+                  <a href="/b2b" className="mt-2 inline-block font-bold underline">مشاهده بخش سازمانی</a>
+                </div>
+              )}
+            </div>
           )}
         </fieldset>
 
@@ -497,13 +546,13 @@ export default function CheckoutForm({
         <button
           type="button"
           onClick={pay}
-          disabled={loading || calculatingShipping || !selectedId || Boolean(weightLimitError)}
+          disabled={loading || calculatingShipping || !selectedId || Boolean(shippingError)}
           className="w-full rounded-2xl bg-flora-900 text-white dark:bg-flora-500 dark:text-flora-950 dark:hover:bg-flora-700 px-6 py-4 text-sm font-black shadow-lg shadow-flora-900/20 transition-colors hover:bg-flora-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           {loading
             ? "در حال انتقال به درگاه…"
-            : weightLimitError
-              ? "امکان پرداخت سفارش بیش از ۳۰ کیلوگرم با پست وجود ندارد"
+            : shippingError
+              ? "خطا در استعلام هزینه ارسال"
               : calculatingShipping
                 ? "در حال محاسبه هزینه ارسال…"
                 : "پرداخت امن با زرین‌پال"}
@@ -550,9 +599,9 @@ export default function CheckoutForm({
               <dd>
                 {calculatingShipping ? (
                   <span className="text-soil-700/60 dark:text-dust-200/60 text-xs">…</span>
-                ) : weightLimitError ? (
+                ) : shippingError ? (
                   <span className="text-red-600 dark:text-red-400 text-xs font-bold">
-                    غیرقابل ارسال با پست
+                    خطا در محاسبه
                   </span>
                 ) : effectiveShippingToman === 0 ? (
                   "رایگان"
@@ -563,7 +612,7 @@ export default function CheckoutForm({
             </div>
             <div className="flex justify-between text-soil-900 dark:text-dust-50">
               <dt>وزن تقریبی</dt>
-              <dd className={totals.totalWeightGrams > 30000 ? "text-red-600 dark:text-red-400 font-bold" : ""}>
+              <dd>
                 {formatWeight(totals.totalWeightGrams)}
               </dd>
             </div>
@@ -575,15 +624,11 @@ export default function CheckoutForm({
                     <span className="text-soil-700/60 dark:text-dust-200/60 text-sm">
                       در حال محاسبه…
                     </span>
-                  ) : weightLimitError ? (
-                    <span className="text-red-600 dark:text-red-400 text-xs font-bold">
-                      نیازمند هماهنگی پشتیبانی
-                    </span>
                   ) : (
                     formatToman(grandTotalToman)
                   )}
                 </div>
-                {!calculatingShipping && !weightLimitError && grandTotalToman >= 1000 && (
+                {!calculatingShipping && grandTotalToman >= 1000 && (
                   <div className="text-[11px] font-normal text-soil-700/70 dark:text-dust-200/70 mt-0.5">
                     ({numberToWordsFa(grandTotalToman)} تومان)
                   </div>
