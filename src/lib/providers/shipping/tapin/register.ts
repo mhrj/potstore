@@ -174,6 +174,94 @@ export type OrderShippingSource = {
 };
 
 /**
+ * Registers a single parcel box with Tapin POST /api/v2/public/order/post/register/.
+ */
+export async function registerSingleTapinBox(
+  address: ShippingAddressLike,
+  items: ShippingItemLike[],
+  boxId: number = 5,
+  packageWeight: number = 1500,
+  manualId?: string,
+): Promise<TapinRegisteredParcel> {
+  const rawCityCode =
+    address.cityCode !== undefined && address.cityCode !== null
+      ? String(address.cityCode).trim()
+      : '';
+  const rawProvinceCode =
+    address.provinceCode !== undefined && address.provinceCode !== null
+      ? String(address.provinceCode).trim()
+      : '';
+
+  if (!rawProvinceCode || !rawCityCode) {
+    throw new Error('کد استان یا کد شهر گیرنده نامعتبر است.');
+  }
+
+  const token = (process.env.TAPIN_API_TOKEN || '').trim();
+  const authHeader = token.startsWith('Bearer ')
+    ? token
+    : token.startsWith('jwt ')
+    ? token
+    : `Bearer ${token}`;
+
+  const payload = buildTapinRegisterPayload(
+    address,
+    items,
+    boxId,
+    packageWeight,
+    manualId,
+  );
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const res = await fetch('https://api.tapin.ir/api/v2/public/order/post/register/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader,
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    const data = await res.json().catch(() => null);
+    logApiCall('tapin', '/api/v2/public/order/post/register/', payload, data);
+
+    if (!res.ok || data?.returns?.status !== 200) {
+      const errMsg =
+        data?.returns?.message ||
+        (data?.entries ? JSON.stringify(data.entries) : null) ||
+        `خطا در ثبت سفارش در تاپین (کد خطا: ${data?.returns?.status || res.status})`;
+      throw new Error(errMsg);
+    }
+
+    const entry = Array.isArray(data.entries) ? data.entries[0] : data.entries;
+    const barcode = String(entry?.barcode || '').trim();
+    const trackingCode = String(
+      entry?.tracking_code || entry?.track_code || entry?.post_tracking_code || '',
+    ).trim();
+    const orderId = String(entry?.order_id || entry?.id || '').trim();
+
+    return {
+      barcode,
+      trackingCode,
+      orderId,
+      boxId,
+      packageWeight,
+    };
+  } catch (err: unknown) {
+    const isTimeout = err instanceof Error && err.name === 'AbortError';
+    if (isTimeout) {
+      throw new Error('پاسخی از تاپین دریافت نشد (مهلت زمانی ۱۵ ثانیه پایان یافت).');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+/**
  * Registers an order with Tapin POST /api/v2/public/order/post/register/.
  * Supports:
  *   registerTapinOrder(order, selectedBoxId, packageWeight)
@@ -278,62 +366,14 @@ export async function registerTapinOrder(
         : String(order.orderNumber)
       : undefined;
 
-    const payload = buildTapinRegisterPayload(
+    const parcel = await registerSingleTapinBox(
       address,
       pkgItems,
       pkg.boxId,
       pkg.packageWeight,
       manualId,
     );
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    try {
-      const res = await fetch('https://api.tapin.ir/api/v2/public/order/post/register/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: authHeader,
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
-
-      const data = await res.json().catch(() => null);
-      logApiCall('tapin', '/api/v2/public/order/post/register/', payload, data);
-
-      if (!res.ok || data?.returns?.status !== 200) {
-        const errMsg =
-          data?.returns?.message ||
-          (data?.entries ? JSON.stringify(data.entries) : null) ||
-          `خطا در ثبت سفارش در تاپین (کد خطا: ${data?.returns?.status || res.status})`;
-        throw new Error(errMsg);
-      }
-
-      const entry = Array.isArray(data.entries) ? data.entries[0] : data.entries;
-      const barcode = String(entry?.barcode || '').trim();
-      const trackingCode = String(
-        entry?.tracking_code || entry?.track_code || entry?.post_tracking_code || '',
-      ).trim();
-      const orderId = String(entry?.order_id || entry?.id || '').trim();
-
-      results.push({
-        barcode,
-        trackingCode,
-        orderId,
-        boxId: pkg.boxId,
-        packageWeight: pkg.packageWeight,
-      });
-    } catch (err: unknown) {
-      const isTimeout = err instanceof Error && err.name === 'AbortError';
-      if (isTimeout) {
-        throw new Error('پاسخی از تاپین دریافت نشد (مهلت زمانی ۱۵ ثانیه پایان یافت).');
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    results.push(parcel);
   }
 
   const primaryBarcode = results.map((r) => r.barcode).filter(Boolean).join(', ') || results[0]?.barcode || '';

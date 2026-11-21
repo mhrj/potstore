@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import {
   buildTapinRegisterPayload,
   registerTapinOrder,
+  registerSingleTapinBox,
 } from '../src/lib/providers/shipping/tapin/register';
 import {
   fetchTapinBoxes,
@@ -371,6 +372,76 @@ describe('Tapin Order Registration Service', () => {
       assert.strictEqual(parcels[0].trackingCode, 'TRACK-39KG-1');
       assert.strictEqual(parcels[1].trackingCode, 'TRACK-39KG-2');
       assert.strictEqual(parcels.trackingCode, 'TRACK-39KG-1, TRACK-39KG-2');
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('registerSingleTapinBox registers an individual box with manual_id and empty box tare weight', async () => {
+    const originalFetch = globalThis.fetch;
+    let capturedPayload: any = null;
+
+    globalThis.fetch = async (url: any, options: any) => {
+      capturedPayload = JSON.parse(options.body);
+      return new Response(
+        JSON.stringify({
+          returns: { status: 200, message: 'عملیات با موفقیت انجام شد' },
+          entries: {
+            barcode: 'BARCODE-SINGLE-1',
+            tracking_code: 'TRACK-SINGLE-1',
+            order_id: 'TPN-BOX-1',
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+
+    try {
+      const parcel = await registerSingleTapinBox(
+        {
+          fullName: 'محمد رضایی',
+          phone: '09213588041',
+          provinceCode: 1,
+          cityCode: 3351,
+          postalCode: '3345892163',
+          line1: 'شهریار، خیابان بهار',
+        },
+        [
+          {
+            productName: 'گلدان سرامیکی مدرن',
+            quantity: 3,
+            unitPriceToman: 250000,
+            weightGrams: 8700,
+          },
+          {
+            productName: 'گلدان بتنی کوچک',
+            quantity: 1,
+            unitPriceToman: 175400,
+            weightGrams: 1500,
+          },
+        ],
+        5,
+        1500,
+        'PS-1001-1',
+      );
+
+      assert.strictEqual(parcel.barcode, 'BARCODE-SINGLE-1');
+      assert.strictEqual(parcel.trackingCode, 'TRACK-SINGLE-1');
+      assert.strictEqual(parcel.orderId, 'TPN-BOX-1');
+      assert.strictEqual(parcel.boxId, 5);
+      assert.strictEqual(parcel.packageWeight, 1500);
+
+      // Verify payload sent to Tapin
+      assert.strictEqual(capturedPayload.manual_id, 'PS-1001-1');
+      assert.strictEqual(capturedPayload.package_weight, 1500);
+      assert.strictEqual(capturedPayload.box_id, 5);
+      assert.strictEqual(capturedPayload.products.length, 2);
+      assert.strictEqual(capturedPayload.products[0].count, 3);
+      assert.strictEqual(capturedPayload.products[0].weight, 8700);
+      assert.strictEqual(capturedPayload.products[0].price, 2500000); // 250,000 * 10
+      assert.strictEqual(capturedPayload.products[1].count, 1);
+      assert.strictEqual(capturedPayload.products[1].weight, 1500);
+      assert.strictEqual(capturedPayload.products[1].price, 1754000); // 175,400 * 10
     } finally {
       globalThis.fetch = originalFetch;
     }

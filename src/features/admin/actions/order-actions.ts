@@ -14,7 +14,11 @@ import {
   paymentStatusAfterCancel,
   shouldRestoreStockOnCancel,
 } from '@/lib/orders';
-import { registerTapinOrder, type TapinPackageConfig } from '@/lib/providers/shipping/tapin/register';
+import {
+  registerTapinOrder,
+  registerSingleTapinBox,
+  type TapinPackageConfig,
+} from '@/lib/providers/shipping/tapin/register';
 
 const updateOrderSchema = z.object({
   orderId: z.string().min(1, 'شناسه سفارش الزامی است'),
@@ -345,4 +349,445 @@ export async function registerOrderWithTapinAction(input: RegisterTapinInput) {
       error: err instanceof Error ? err.message : 'خطای ناشناخته در ارتباط با تاپین رخ داد.',
     };
   }
+}
+
+const registerTapinBoxSchema = z.object({
+  orderId: z.string().min(1, 'شناسه سفارش الزامی است'),
+  boxIndex: z.number().int().nonnegative('شماره جعبه نامعتبر است'),
+  boxId: z.number().int().positive('شناسه جعبه نامعتبر است'),
+  packageWeight: z.number().int().positive('وزن جعبه باید عددی مثبت باشد').default(1500),
+  allowReRegister: z.boolean().optional(),
+  items: z
+    .array(
+      z.object({
+        orderItemId: z.string().min(1, 'شناسه قلم سفارش الزامی است'),
+        quantity: z.number().int().positive('تعداد باید عددی مثبت باشد'),
+      }),
+    )
+    .min(1, 'حداقل یک محصول برای ثبت در این کارتن الزامی است'),
+});
+
+export type RegisterTapinBoxInput = z.infer<typeof registerTapinBoxSchema>;
+
+export async function registerTapinBoxAction(input: RegisterTapinBoxInput) {
+  const session = await getActiveAdmin();
+  if (!session) {
+    return { success: false as const, error: 'دسترسی غیرمجاز است' };
+  }
+
+  const parsed = registerTapinBoxSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      error: parsed.error.issues[0]?.message ?? 'اطلاعات ارسالی نامعتبر است',
+    };
+  }
+
+  const { orderId, boxIndex, boxId, packageWeight, items: boxItemsInput } = parsed.data;
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      paymentStatus: true,
+      trackingCode: true,
+      barcode: true,
+      tapinOrderId: true,
+      trackingCodes: true,
+      barcodes: true,
+      tapinOrderIds: true,
+      packageConfigs: true,
+      shippingCarrier: true,
+      shipFullName: true,
+      shipPhone: true,
+      shipProvinceCode: true,
+      shipCityCode: true,
+      shipPostalCode: true,
+      shipLine1: true,
+      shipLine2: true,
+      items: {
+        select: {
+          id: true,
+          productName: true,
+          quantity: true,
+          unitToman: true,
+          lineTotalToman: true,
+          isBundle: true,
+          bundleSize: true,
+          colorData: true,
+          product: {
+            select: {
+              weightGrams: true,
+              bundleItems: true,
+              isFragile: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!order) {
+    return { success: false as const, error: 'سفارش یافت نشد' };
+  }
+
+  // Parse existing package configs
+  const existingConfigs: any[] = Array.isArray(order.packageConfigs)
+    ? (order.packageConfigs as any[])
+    : [];
+
+  // Check if boxIndex is already registered
+  const existingBox = existingConfigs.find((b) => b.boxIndex === boxIndex);
+  if (
+    existingBox &&
+    !parsed.data.allowReRegister &&
+    (existingBox.status === 'REGISTERED' || existingBox.trackingCode || existingBox.barcode)
+  ) {
+    return {
+      success: false as const,
+      error: 'این بسته قبلاً در تاپین ثبت شده است. برای ثبت دوباره، ابتدا ثبت قبلی را لغو کنید.',
+    };
+  }
+
+  // Calculate registered quantities per orderItemId (excluding current box if re-registering)
+  const registeredCounts = new Map<string, number>();
+  for (const b of existingConfigs) {
+    if (b.boxIndex === boxIndex) continue;
+    if (b.status === 'REGISTERED' || b.trackingCode || b.barcode) {
+      if (Array.isArray(b.items)) {
+        for (const it of b.items) {
+          registeredCounts.set(
+            it.orderItemId,
+            (registeredCounts.get(it.orderItemId) || 0) + Number(it.quantity || 0),
+          );
+        }
+      }
+    }
+  }
+
+  // Validate items in this box
+  const boxShippingItems: Array<{
+    productName: string;
+    quantity: number;
+    unitPriceToman: number;
+    unitToman: number;
+    weightGrams: number;
+    isFragile: boolean;
+  }> = [];
+
+  const storedBoxItems: Array<{
+    orderItemId: string;
+    productName: string;
+    quantity: number;
+    unitWeightGrams: number;
+    unitPriceToman: number;
+    isBundle: boolean;
+    bundleSize: number;
+  }> = [];
+
+  let totalProductWeightGrams = 0;
+
+  for (const requestedItem of boxItemsInput) {
+    const orderItem = order.items.find((i) => i.id === requestedItem.orderItemId);
+    if (!orderItem) {
+      return { success: false as const, error: `قلم سفارش با شناسه ${requestedItem.orderItemId} یافت نشد.` };
+    }
+
+    const bundleSize = Math.max(1, Number(orderItem.bundleSize) || 1);
+    const isBundle = Boolean(orderItem.isBundle) || bundleSize > 1;
+    const maxShippingCount = isBundle
+      ? Math.max(1, Math.round(orderItem.quantity / bundleSize))
+      : orderItem.quantity;
+
+    const alreadyRegistered = registeredCounts.get(orderItem.id) || 0;
+    const remainingCount = maxShippingCount - alreadyRegistered;
+
+    if (requestedItem.quantity > remainingCount) {
+      return {
+        success: false as const,
+        error: `تعداد انتخابی برای «${orderItem.productName}» (${requestedItem.quantity}) از مانده ثبت نشده (${remainingCount}) بیشتر است.`,
+      };
+    }
+
+    // Weight of 1 shipping unit (bundle or single pot)
+    const bundleItemsArr = Array.isArray(orderItem.product?.bundleItems)
+      ? (orderItem.product!.bundleItems as Array<{ weightGrams?: number }>)
+      : [];
+    const bundleItemsWeight = bundleItemsArr.reduce((s, it) => s + (it.weightGrams || 0), 0);
+    const colorWeight =
+      typeof (orderItem.colorData as any)?.weightGrams === 'number'
+        ? Number((orderItem.colorData as any).weightGrams)
+        : 0;
+
+    const unitWeightGrams = isBundle
+      ? bundleItemsWeight > 0
+        ? bundleItemsWeight
+        : colorWeight > 0
+        ? colorWeight
+        : orderItem.product?.weightGrams || 1000
+      : orderItem.product?.weightGrams || 1000;
+
+    // Price of 1 shipping unit in Toman
+    const unitPriceToman = isBundle
+      ? orderItem.lineTotalToman && maxShippingCount
+        ? Math.round(orderItem.lineTotalToman / maxShippingCount)
+        : orderItem.unitToman * bundleSize
+      : orderItem.unitToman;
+
+    totalProductWeightGrams += unitWeightGrams * requestedItem.quantity;
+
+    boxShippingItems.push({
+      productName: orderItem.productName,
+      quantity: requestedItem.quantity,
+      unitPriceToman,
+      unitToman: unitPriceToman,
+      weightGrams: unitWeightGrams,
+      isFragile: orderItem.product?.isFragile ?? false,
+    });
+
+    storedBoxItems.push({
+      orderItemId: orderItem.id,
+      productName: orderItem.productName,
+      quantity: requestedItem.quantity,
+      unitWeightGrams,
+      unitPriceToman,
+      isBundle,
+      bundleSize,
+    });
+  }
+
+  const totalGrossWeightGrams = totalProductWeightGrams + packageWeight;
+  if (totalGrossWeightGrams > 30000) {
+    return {
+      success: false as const,
+      error: `وزن ناخالص این بسته با احتساب کارتن (${totalGrossWeightGrams} گرم) از سقف مجاز ۳۰۰۰۰ گرم (۳۰ کیلوگرم) بیشتر است. لطفاً اقلام را سبک‌تر کنید.`,
+    };
+  }
+
+  try {
+    const address = {
+      fullName: order.shipFullName,
+      phone: order.shipPhone,
+      provinceCode: order.shipProvinceCode,
+      cityCode: order.shipCityCode,
+      postalCode: order.shipPostalCode,
+      line1: order.shipLine1,
+      line2: order.shipLine2,
+    };
+
+    const manualId = order.orderNumber
+      ? `${order.orderNumber}-${boxIndex + 1}`
+      : undefined;
+
+    const parcel = await registerSingleTapinBox(
+      address,
+      boxShippingItems,
+      boxId,
+      packageWeight,
+      manualId,
+    );
+
+    const registeredBox = {
+      boxIndex,
+      boxId,
+      packageWeight,
+      totalProductWeightGrams,
+      status: 'REGISTERED' as const,
+      trackingCode: parcel.trackingCode,
+      barcode: parcel.barcode,
+      tapinOrderId: parcel.orderId,
+      registeredAt: new Date().toISOString(),
+      items: storedBoxItems,
+    };
+
+    // Update or append in packageConfigs
+    let updatedConfigs = [...existingConfigs];
+    const targetIdx = updatedConfigs.findIndex((b) => b.boxIndex === boxIndex);
+    if (targetIdx >= 0) {
+      updatedConfigs[targetIdx] = registeredBox;
+    } else {
+      updatedConfigs.push(registeredBox);
+    }
+
+    // Keep sorted by boxIndex
+    updatedConfigs.sort((a, b) => (a.boxIndex ?? 0) - (b.boxIndex ?? 0));
+
+    const allRegistered = updatedConfigs.filter(
+      (b) => b.status === 'REGISTERED' || b.trackingCode || b.barcode,
+    );
+    const allTrackingCodes = allRegistered.map((b) => b.trackingCode).filter(Boolean);
+    const allBarcodes = allRegistered.map((b) => b.barcode).filter(Boolean);
+    const allTapinOrderIds = allRegistered.map((b) => b.tapinOrderId || b.orderId).filter(Boolean);
+
+    const primaryTracking = allTrackingCodes.join(', ');
+    const primaryBarcode = allBarcodes.join(', ');
+    const primaryTapinOrderId = allTapinOrderIds.join(', ');
+
+    const newStatus =
+      order.status === 'PENDING' || order.status === 'PAID' ? 'PROCESSING' : order.status;
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        trackingCode: primaryTracking || null,
+        barcode: primaryBarcode || null,
+        tapinOrderId: primaryTapinOrderId || null,
+        trackingCodes: allTrackingCodes.length > 0 ? allTrackingCodes : Prisma.JsonNull,
+        barcodes: allBarcodes.length > 0 ? allBarcodes : Prisma.JsonNull,
+        tapinOrderIds: allTapinOrderIds.length > 0 ? allTapinOrderIds : Prisma.JsonNull,
+        packageConfigs: updatedConfigs,
+        shippingCarrier: 'پست پیشتاز',
+        status: newStatus,
+      },
+      select: {
+        id: true,
+        status: true,
+        trackingCode: true,
+        barcode: true,
+        tapinOrderId: true,
+        trackingCodes: true,
+        barcodes: true,
+        tapinOrderIds: true,
+        packageConfigs: true,
+        shippingCarrier: true,
+      },
+    });
+
+    revalidatePath('/admin/orders');
+    revalidatePath(`/admin/orders/${orderId}`);
+    revalidatePath(`/dashboard/orders/${orderId}`);
+
+    return {
+      success: true as const,
+      parcel,
+      box: registeredBox,
+      order: updatedOrder,
+      packageConfigs: updatedConfigs,
+      trackingCodes: allTrackingCodes,
+      barcodes: allBarcodes,
+    };
+  } catch (err: unknown) {
+    console.error('[registerTapinBoxAction] Error:', err);
+    return {
+      success: false as const,
+      error: err instanceof Error ? err.message : 'خطای ناشناخته در ارتباط با تاپین رخ داد.',
+    };
+  }
+}
+
+const resetTapinBoxSchema = z.object({
+  orderId: z.string().min(1, 'شناسه سفارش الزامی است'),
+  boxIndex: z.number().int().nonnegative('شماره جعبه نامعتبر است'),
+});
+
+export type ResetTapinBoxInput = z.infer<typeof resetTapinBoxSchema>;
+
+export async function resetTapinBoxAction(input: ResetTapinBoxInput) {
+  const session = await getActiveAdmin();
+  if (!session) {
+    return { success: false as const, error: 'دسترسی غیرمجاز است' };
+  }
+
+  const parsed = resetTapinBoxSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      error: parsed.error.issues[0]?.message ?? 'اطلاعات ارسالی نامعتبر است',
+    };
+  }
+
+  const { orderId, boxIndex } = parsed.data;
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    select: {
+      id: true,
+      status: true,
+      paymentStatus: true,
+      packageConfigs: true,
+    },
+  });
+
+  if (!order) {
+    return { success: false as const, error: 'سفارش یافت نشد' };
+  }
+
+  const existingConfigs: any[] = Array.isArray(order.packageConfigs)
+    ? (order.packageConfigs as any[])
+    : [];
+
+  const targetBox = existingConfigs.find((b) => b.boxIndex === boxIndex);
+  if (!targetBox) {
+    return { success: false as const, error: 'کارتن مورد نظر یافت نشد.' };
+  }
+
+  // Reset this box's status to PENDING and clear parcel codes, preserving items and box settings
+  const updatedConfigs = existingConfigs.map((b) => {
+    if (b.boxIndex !== boxIndex) return b;
+    return {
+      ...b,
+      status: 'PENDING' as const,
+      trackingCode: undefined,
+      barcode: undefined,
+      tapinOrderId: undefined,
+      registeredAt: undefined,
+    };
+  });
+
+  // Re-aggregate remaining registered boxes
+  const remainingRegistered = updatedConfigs.filter(
+    (b) => b.status === 'REGISTERED' && (b.trackingCode || b.barcode),
+  );
+  const remainingTrackingCodes = remainingRegistered.map((b) => b.trackingCode).filter(Boolean);
+  const remainingBarcodes = remainingRegistered.map((b) => b.barcode).filter(Boolean);
+  const remainingTapinOrderIds = remainingRegistered
+    .map((b) => b.tapinOrderId || b.orderId)
+    .filter(Boolean);
+
+  const primaryTracking = remainingTrackingCodes.join(', ') || null;
+  const primaryBarcode = remainingBarcodes.join(', ') || null;
+  const primaryTapinOrderId = remainingTapinOrderIds.join(', ') || null;
+
+  // If no boxes are registered anymore, revert status to PAID (or previous status)
+  let nextStatus = order.status;
+  if (remainingRegistered.length === 0 && order.status === 'PROCESSING') {
+    nextStatus = order.paymentStatus === 'PAID' ? 'PAID' : 'PENDING';
+  }
+
+  const updatedOrder = await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      trackingCode: primaryTracking,
+      barcode: primaryBarcode,
+      tapinOrderId: primaryTapinOrderId,
+      trackingCodes: remainingTrackingCodes.length > 0 ? remainingTrackingCodes : Prisma.JsonNull,
+      barcodes: remainingBarcodes.length > 0 ? remainingBarcodes : Prisma.JsonNull,
+      tapinOrderIds: remainingTapinOrderIds.length > 0 ? remainingTapinOrderIds : Prisma.JsonNull,
+      packageConfigs: updatedConfigs,
+      status: nextStatus,
+    },
+    select: {
+      id: true,
+      status: true,
+      trackingCode: true,
+      barcode: true,
+      tapinOrderId: true,
+      trackingCodes: true,
+      barcodes: true,
+      tapinOrderIds: true,
+      packageConfigs: true,
+    },
+  });
+
+  revalidatePath('/admin/orders');
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath(`/dashboard/orders/${orderId}`);
+
+  return {
+    success: true as const,
+    order: updatedOrder,
+    packageConfigs: updatedConfigs,
+  };
 }

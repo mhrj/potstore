@@ -367,6 +367,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
           totalWeightGrams={totalWeightGrams}
           totalItemsCount={totalItemsCount}
           boxes={boxes}
+          items={order.items}
         />
 
         <OrderStatusForm

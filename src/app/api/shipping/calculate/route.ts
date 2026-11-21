@@ -32,6 +32,8 @@ const schema = z.object({
   addressId: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   province: z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  line1: z.string().optional().nullable(),
 });
 
 export async function POST(req: Request) {
@@ -93,6 +95,9 @@ export async function POST(req: Request) {
   let shippingToman = 0;
 
   if (!isFree) {
+    const resolvedPostalCode = address?.postalCode || parsed.data.postalCode || "";
+    const resolvedLine1 = address?.line1 || parsed.data.line1 || "";
+
     const addressLike: ShippingAddressLike = {
       fullName: address?.fullName ?? "مشتری",
       phone: address?.phone ?? "",
@@ -100,12 +105,12 @@ export async function POST(req: Request) {
       provinceCode: resolvedProvinceCode,
       city: destination,
       cityCode: resolvedCityCode,
-      postalCode: address?.postalCode ?? "",
-      line1: address?.line1 ?? "",
+      postalCode: resolvedPostalCode,
+      line1: resolvedLine1,
       line2: address?.line2 ?? null,
     };
 
-    const cacheKey = `${session.sub}:${resolvedProvinceCode ?? ''}:${resolvedCityCode ?? ''}:${totals.payableToman}:${totals.totalWeightGrams}`;
+    const cacheKey = `${session.sub}:${addressId || ''}:${resolvedProvinceCode ?? ''}:${resolvedCityCode ?? ''}:${resolvedPostalCode}:${totals.payableToman}:${totals.totalWeightGrams}`;
     const now = Date.now();
     const cached = serverRateCache.get(cacheKey);
 

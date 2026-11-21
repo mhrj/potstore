@@ -149,9 +149,11 @@ export default function CheckoutForm({
   useEffect(() => {
     if (!selectedAddress) return;
 
-    const cacheKey = `${selectedAddress.id}_${cartSignature}`;
+    // Address fingerprint ensures any change in ID, province, city, postal code, or address line triggers a fresh calculation
+    const addressFingerprint = `${selectedAddress.id}_${selectedAddress.provinceCode ?? ''}_${selectedAddress.cityCode ?? ''}_${selectedAddress.postalCode ?? ''}_${selectedAddress.line1 ?? ''}`;
+    const cacheKey = `${addressFingerprint}_${cartSignature}`;
 
-    // 1) If already cached, apply immediately without network call
+    // 1) If already cached with identical address data and cart totals, apply immediately
     const cached = shippingCacheRef.current.get(cacheKey);
     if (cached) {
       setShippingOptions(cached.options);
@@ -188,6 +190,8 @@ export default function CheckoutForm({
           addressId: selectedAddress.id,
           city: selectedAddress.city,
           province: selectedAddress.province,
+          postalCode: selectedAddress.postalCode,
+          line1: selectedAddress.line1,
         }),
         signal: controller.signal,
       })
@@ -234,7 +238,14 @@ export default function CheckoutForm({
         inFlightKeyRef.current = null;
       }
     };
-  }, [selectedAddress?.id, cartSignature, selectedAddress?.cityCode, selectedAddress?.provinceCode]);
+  }, [
+    selectedAddress?.id,
+    selectedAddress?.provinceCode,
+    selectedAddress?.cityCode,
+    selectedAddress?.postalCode,
+    selectedAddress?.line1,
+    cartSignature,
+  ]);
 
   const selectedOption = useMemo(() => {
     return (
@@ -247,12 +258,16 @@ export default function CheckoutForm({
   const grandTotalToman = totals.payableToman + effectiveShippingToman;
 
   const handleCreated = async (address: AddressRecord) => {
+    shippingCacheRef.current.clear();
+    inFlightKeyRef.current = null;
     setAddressList((current) => [address as Address, ...current]);
     setSelectedId(address.id);
     setShowForm(false);
   };
 
   const handleAddressUpdated = (saved: AddressRecord) => {
+    shippingCacheRef.current.clear();
+    inFlightKeyRef.current = null;
     setAddressList((current) =>
       current.map((a) => (a.id === saved.id ? (saved as Address) : a)),
     );
