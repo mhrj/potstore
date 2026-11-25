@@ -90,6 +90,15 @@ describe('Tapin Register Payload Construction', () => {
     assert.strictEqual(payload.register_type, 2);
     assert.strictEqual(payload.box_id, 4);
     assert.strictEqual(payload.package_weight, 600);
+    assert.strictEqual(payload.non_standard_package, false);
+  });
+
+  it('sets non_standard_package: true and box_id: 10 when isNonStandard is true', () => {
+    const payload = buildTapinRegisterPayload(address, items, 5, 1500, 'PS-99', 0, true);
+    assert.strictEqual(payload.non_standard_package, true);
+    assert.strictEqual(payload.box_id, 10);
+    assert.strictEqual(payload.package_weight, 1500);
+    assert.strictEqual(payload.manual_id, 'PS-99');
   });
 });
 
@@ -435,6 +444,7 @@ describe('Tapin Order Registration Service', () => {
       assert.strictEqual(capturedPayload.manual_id, 'PS-1001-1');
       assert.strictEqual(capturedPayload.package_weight, 1500);
       assert.strictEqual(capturedPayload.box_id, 5);
+      assert.strictEqual(capturedPayload.non_standard_package, false);
       assert.strictEqual(capturedPayload.products.length, 2);
       assert.strictEqual(capturedPayload.products[0].count, 3);
       assert.strictEqual(capturedPayload.products[0].weight, 8700);
@@ -442,6 +452,84 @@ describe('Tapin Order Registration Service', () => {
       assert.strictEqual(capturedPayload.products[1].count, 1);
       assert.strictEqual(capturedPayload.products[1].weight, 1500);
       assert.strictEqual(capturedPayload.products[1].price, 1754000); // 175,400 * 10
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('registerSingleTapinBox and registerTapinOrder send non_standard_package: true and box_id: 10 when isNonStandard is true', async () => {
+    const originalFetch = globalThis.fetch;
+    const capturedPayloads: any[] = [];
+
+    globalThis.fetch = async (url: any, options: any) => {
+      capturedPayloads.push(JSON.parse(options.body));
+      return new Response(
+        JSON.stringify({
+          returns: { status: 200, message: 'عملیات با موفقیت انجام شد' },
+          entries: {
+            barcode: 'BARCODE-NS-1',
+            tracking_code: 'TRACK-NS-1',
+            order_id: 'TPN-NS-1',
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    };
+
+    try {
+      const parcel = await registerSingleTapinBox(
+        {
+          fullName: 'سارا محمدی',
+          phone: '09121112233',
+          provinceCode: 8,
+          cityCode: 301,
+          postalCode: '1234567890',
+          line1: 'تهران، خیابان آزادی',
+        },
+        [
+          {
+            productName: 'گلدان بزرگ سفالی',
+            quantity: 1,
+            unitPriceToman: 400000,
+            weightGrams: 5000,
+          },
+        ],
+        5,
+        1500,
+        'PS-NS-1',
+        true,
+      );
+
+      assert.strictEqual(parcel.isNonStandard, true);
+      assert.strictEqual(parcel.boxId, 10);
+      assert.strictEqual(capturedPayloads[0].non_standard_package, true);
+      assert.strictEqual(capturedPayloads[0].box_id, 10);
+
+      await registerTapinOrder(
+        {
+          orderNumber: 'PS-NS-2',
+          shipFullName: 'سارا محمدی',
+          shipPhone: '09121112233',
+          shipProvinceCode: 8,
+          shipCityCode: 301,
+          shipPostalCode: '1234567890',
+          shipLine1: 'تهران، خیابان آزادی',
+          items: [
+            {
+              productName: 'گلدان بزرگ سفالی',
+              quantity: 1,
+              unitPriceToman: 400000,
+              weightGrams: 5000,
+            },
+          ],
+        },
+        5,
+        1500,
+        true,
+      );
+
+      assert.strictEqual(capturedPayloads[1].non_standard_package, true);
+      assert.strictEqual(capturedPayloads[1].box_id, 10);
     } finally {
       globalThis.fetch = originalFetch;
     }

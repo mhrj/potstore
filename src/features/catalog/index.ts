@@ -6,4 +6,5 @@ export { default as ProductDetailView } from './components/ProductDetailView';
 export { default as ProductGallery } from './components/ProductGallery';
 export { default as TagFilterSelect } from './components/TagFilterSelect';
 export { default as TieredPricing } from './components/TieredPricing';
+export { default as VariantSelector, type ProductVariantOption } from './components/VariantSelector';
 export { ProductColorProvider, useProductColor } from './components/ProductColorContext';

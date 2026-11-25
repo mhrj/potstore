@@ -65,7 +65,7 @@ export default function LandingImageManager({ initial }: { initial: LandingImage
       });
 
       const uploadData = await uploadRes.json().catch(() => ({}));
-      if (!uploadRes.ok) {
+      if (!uploadRes.ok || !uploadData?.url) {
         throw new Error(uploadData?.message ?? 'آپلود تصویر ناموفق بود');
       }
 
@@ -120,7 +120,7 @@ export default function LandingImageManager({ initial }: { initial: LandingImage
       <div className="rounded-xl border border-soil-900/10 dark:border-dust-50/10 bg-white/70 dark:bg-flora-900/70 p-4 text-xs text-soil-700/80 dark:text-dust-200/80">
         <p className="font-bold text-soil-900 dark:text-dust-50">مدیریت تصاویر صفحه فرود (Landing Page)</p>
         <p className="mt-1">
-          تصاویر در حافظه محلی ذخیره می‌شوند (<code className="font-mono text-soil-900 dark:text-dust-50">/public/uploads/landing</code>) و در جایگاه‌های اصلی وب‌سایت نمایش داده می‌شوند.
+          تصاویر به صورت خودکار به فرمت WebP تبدیل شده و در فضای ابری (لیارا) ذخیره می‌شوند و در جایگاه‌های اصلی وب‌سایت نمایش داده می‌شوند.
         </p>
       </div>
 

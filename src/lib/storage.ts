@@ -1,20 +1,13 @@
-import { mkdir, writeFile } from 'node:fs/promises';
-import path from 'node:path';
-import { getEnv } from '@/lib/env';
-import { IMAGE_EXTENSION_BY_TYPE, sniffImageType } from '@/lib/image-validation';
+import { randomUUID } from 'node:crypto';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import sharp from 'sharp';
+import { s3 } from '@/lib/s3';
+import { sniffImageType } from '@/lib/image-validation';
 
 export type UploadKind = 'product' | 'landing';
 
 const allowedMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif']);
 const maxBytes = 5 * 1024 * 1024;
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80) || 'upload';
-}
 
 /**
  * The type the client claimed, or '' when it declined to say. Kept only so a
@@ -55,24 +48,56 @@ export async function saveUploadedImage(file: File, kind: UploadKind = 'product'
     throw new Error('نوع اعلام‌شده فایل با محتوای واقعی آن مطابقت ندارد');
   }
 
-  const provider = getEnv('IMAGE_STORAGE_PROVIDER', 'local').toLowerCase();
-  if (provider === 'cloudinary') {
-    throw new Error(
-      'پشتیبانی Cloudinary هنوز پیکربندی نشده است. برای پشتیبانی تولیدی، متغیرهای CLOUDINARY_CLOUD_NAME، CLOUDINARY_API_KEY و CLOUDINARY_API_SECRET را تنظیم کنید.',
-    );
+  const bucket = process.env.LIARA_S3_BUCKET?.trim();
+  const endpoint = process.env.LIARA_S3_ENDPOINT?.trim();
+
+  if (!bucket || !endpoint) {
+    throw new Error('تنظیمات فضای ابری (LIARA_S3_BUCKET / LIARA_S3_ENDPOINT) کامل نیست');
   }
 
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', kind);
-  await mkdir(uploadDir, { recursive: true });
+  // 1. Convert to WebP using sharp
+  const webpBuffer = await sharp(Buffer.from(bytes))
+    .webp({ quality: 80 })
+    .toBuffer();
 
-  const baseName = `${Date.now()}-${slugify(file.name || 'image')}`;
-  const fileName = `${baseName}${IMAGE_EXTENSION_BY_TYPE[detected]}`;
-  const finalPath = path.join(uploadDir, fileName);
+  // 2. Generate a unique filename
+  const filename = `${randomUUID()}.webp`;
+  const folder = kind === 'landing' ? 'landing' : 'products';
+  const key = `${folder}/${filename}`;
 
-  await writeFile(finalPath, Buffer.from(bytes));
+  // 3. Upload to Liara Object Storage
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    Body: webpBuffer,
+    ContentType: 'image/webp',
+  });
+
+  try {
+    await s3.send(command);
+  } catch (error: unknown) {
+    const err = error as {
+      name?: string;
+      message?: string;
+      Code?: string;
+      code?: string;
+      $metadata?: { httpStatusCode?: number };
+    };
+    console.error('=== [S3 UPLOAD ERROR] ===');
+    console.error('Name:', err?.name);
+    console.error('Message:', err?.message);
+    console.error('Code:', err?.Code || err?.code);
+    console.error('Status Code:', err?.$metadata?.httpStatusCode);
+    console.error('Full Error:', error);
+    throw new Error(`S3 Upload Failed: ${err?.message || 'Unknown error'}`);
+  }
+
+  // 4. Return the internal API proxy URL
+  const url = `/api/image-proxy?key=${encodeURIComponent(key)}`;
+
   return {
-    url: `/uploads/${kind}/${fileName}`,
-    filename: fileName,
+    url,
+    filename,
     kind,
   };
 }

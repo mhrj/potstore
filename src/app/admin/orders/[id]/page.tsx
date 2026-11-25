@@ -47,6 +47,7 @@ export default async function AdminOrderDetailPage({ params }: Props) {
       barcodes: true,
       tapinOrderIds: true,
       packageConfigs: true,
+      isNonStandard: true,
       shippingCarrier: true,
       note: true,
       subtotalToman: true,
@@ -358,12 +359,14 @@ export default async function AdminOrderDetailPage({ params }: Props) {
                   boxId: number;
                   packageWeight?: number;
                   weight?: number;
+                  isNonStandard?: boolean;
                   trackingCode?: string;
                   barcode?: string;
                   orderId?: string;
                 }>)
               : null
           }
+          initialIsNonStandard={order.isNonStandard}
           totalWeightGrams={totalWeightGrams}
           totalItemsCount={totalItemsCount}
           boxes={boxes}

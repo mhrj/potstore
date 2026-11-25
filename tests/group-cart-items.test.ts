@@ -282,5 +282,43 @@ describe('TASK 2 — Grouping Logic (groupCartItems)', () => {
       assert.equal(grp.configurations[1].items[1].color, 'مشکی');
     }
   });
+
+  it('keeps distinct variants of the same product as separate groups with their variantTitle', () => {
+    const rawItems = [
+      {
+        productId: 'pot-mika',
+        productName: 'گلدان میکا',
+        productSlug: 'pot-mika',
+        variantId: 'var-10',
+        variantTitle: 'سایز ۱۰',
+        quantity: 2,
+        unitToman: 120000,
+        lineTotalToman: 240000,
+        isBundle: false,
+        bundleSize: 1,
+      },
+      {
+        productId: 'pot-mika',
+        productName: 'گلدان میکا',
+        productSlug: 'pot-mika',
+        variantId: 'var-15',
+        variantTitle: 'سایز ۱۵',
+        quantity: 1,
+        unitToman: 180000,
+        lineTotalToman: 180000,
+        isBundle: false,
+        bundleSize: 1,
+      },
+    ];
+
+    const groups = groupCartItems(rawItems);
+    assert.equal(groups.length, 2);
+    assert.equal(groups[0].productId, 'pot-mika');
+    assert.equal(groups[0].variantTitle, 'سایز ۱۰');
+    assert.equal(groups[0].totalQuantity, 2);
+    assert.equal(groups[1].productId, 'pot-mika');
+    assert.equal(groups[1].variantTitle, 'سایز ۱۵');
+    assert.equal(groups[1].totalQuantity, 1);
+  });
 });
 

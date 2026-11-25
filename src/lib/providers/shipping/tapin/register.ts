@@ -9,6 +9,7 @@ import {
 export type TapinPackageConfig = {
   boxId: number;
   packageWeight: number; // Tare weight of empty box only (grams)
+  isNonStandard?: boolean;
 };
 
 export type TapinRegisteredParcel = {
@@ -17,6 +18,7 @@ export type TapinRegisteredParcel = {
   orderId: string;
   boxId: number;
   packageWeight: number;
+  isNonStandard?: boolean;
 };
 
 export type TapinRegisterResult = TapinRegisteredParcel[] & {
@@ -66,6 +68,7 @@ export function buildTapinRegisterPayload(
   packageWeight: number = 500,
   manualIdOrRegisterType?: string | number,
   registerTypeParam?: number,
+  isNonStandard: boolean = false,
 ): TapinRegisterPayload {
   let manualId: string | undefined;
   let registerType: number | undefined;
@@ -135,12 +138,12 @@ export function buildTapinRegisterPayload(
     pay_type: '1',
     order_type: '1',
     package_weight: Number(packageWeight), // Box tare weight only
-    box_id: Number(boxId),
+    box_id: isNonStandard ? 10 : Number(boxId),
     packet_type: 2,
     has_insurance: false,
     pre_paid_price: 0,
     packaging_price: 0,
-    non_standard_package: false,
+    non_standard_package: Boolean(isNonStandard),
     parcel_turning: true,
     kiosk_id: 0,
     duration: 48,
@@ -182,6 +185,7 @@ export async function registerSingleTapinBox(
   boxId: number = 5,
   packageWeight: number = 1500,
   manualId?: string,
+  isNonStandard: boolean = false,
 ): Promise<TapinRegisteredParcel> {
   const rawCityCode =
     address.cityCode !== undefined && address.cityCode !== null
@@ -209,6 +213,8 @@ export async function registerSingleTapinBox(
     boxId,
     packageWeight,
     manualId,
+    undefined,
+    isNonStandard,
   );
 
   const controller = new AbortController();
@@ -247,8 +253,9 @@ export async function registerSingleTapinBox(
       barcode,
       trackingCode,
       orderId,
-      boxId,
+      boxId: payload.box_id,
       packageWeight,
+      isNonStandard,
     };
   } catch (err: unknown) {
     const isTimeout = err instanceof Error && err.name === 'AbortError';
@@ -271,18 +278,28 @@ export async function registerTapinOrder(
   order: OrderShippingSource,
   selectedBoxIdOrPackages: number | TapinPackageConfig[] = 5,
   packageWeightParam: number = 500,
+  isNonStandard: boolean = false,
 ): Promise<TapinRegisterResult> {
   let packages: TapinPackageConfig[];
 
   if (typeof selectedBoxIdOrPackages === 'number') {
-    packages = [{ boxId: selectedBoxIdOrPackages, packageWeight: packageWeightParam }];
+    packages = [
+      {
+        boxId: selectedBoxIdOrPackages,
+        packageWeight: packageWeightParam,
+        isNonStandard,
+      },
+    ];
   } else if (Array.isArray(selectedBoxIdOrPackages)) {
     if (selectedBoxIdOrPackages.length === 0) {
       throw new Error('حداقل یک بسته برای ثبت سفارش الزامی است.');
     }
-    packages = selectedBoxIdOrPackages;
+    packages = selectedBoxIdOrPackages.map((p) => ({
+      ...p,
+      isNonStandard: p.isNonStandard ?? isNonStandard,
+    }));
   } else {
-    packages = [{ boxId: 5, packageWeight: 500 }];
+    packages = [{ boxId: 5, packageWeight: 500, isNonStandard }];
   }
 
   const address: ShippingAddressLike = {
@@ -372,6 +389,7 @@ export async function registerTapinOrder(
       pkg.boxId,
       pkg.packageWeight,
       manualId,
+      pkg.isNonStandard ?? isNonStandard,
     );
     results.push(parcel);
   }

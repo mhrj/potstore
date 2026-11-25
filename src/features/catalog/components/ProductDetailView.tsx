@@ -1,7 +1,11 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import { toFa } from '@/lib/format';
 import { parseFeatures, parseBundleItems, parseColorOptions, calculateTotalStock } from '@/lib/product-features';
 import TieredPricing from '@/features/catalog/components/TieredPricing';
+import VariantSelector from '@/features/catalog/components/VariantSelector';
 import ProductGallery from '@/features/catalog/components/ProductGallery';
 import ColorPicker from '@/features/catalog/components/ColorPicker';
 import { ProductColorProvider } from '@/features/catalog/components/ProductColorContext';
@@ -99,6 +103,11 @@ export default function ProductDetailView({
     product.salePriceToman < product.basePriceToman;
   const effectiveBasePrice = hasSale ? product.salePriceToman! : product.basePriceToman;
   const hasVariants = !isBundle && Boolean(product.variants && product.variants.length > 0);
+  const defaultVariantId =
+    hasVariants && product.variants
+      ? (product.variants.find((v) => v.stock > 0)?.id ?? product.variants[0]?.id ?? null)
+      : null;
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(defaultVariantId);
   const startingPrice = hasVariants ? product.variants![0].priceToman : effectiveBasePrice;
 
   const jsonLd = {
@@ -164,6 +173,15 @@ export default function ProductDetailView({
               productName={product.name}
               soldOut={totalStock <= 0}
             />
+            {hasVariants && product.variants && (
+              <div className="mt-6">
+                <VariantSelector
+                  variants={product.variants}
+                  selectedVariantId={selectedVariantId}
+                  onSelectVariant={setSelectedVariantId}
+                />
+              </div>
+            )}
             {product.bundleSize <= 1 && (
               <ColorPicker
                 product={{
@@ -246,6 +264,8 @@ export default function ProductDetailView({
                 }))}
                 isAuthed={isAuthed}
                 globalColors={globalColors}
+                selectedVariantId={selectedVariantId}
+                onSelectVariant={setSelectedVariantId}
               />
             </div>
 

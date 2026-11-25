@@ -119,6 +119,8 @@ type Props = {
   isAuthed: boolean;
   allowBatchDiscount?: boolean;
   globalColors?: Array<{ name: string; hexCode: string }>;
+  selectedVariantId?: string | null;
+  onSelectVariant?: (variantId: string) => void;
 };
 
 export default function TieredPricing({
@@ -127,6 +129,7 @@ export default function TieredPricing({
   isAuthed,
   allowBatchDiscount,
   globalColors,
+  selectedVariantId = null,
 }: Props) {
   const allowBatch = allowBatchDiscount ?? product.allowBatchDiscount ?? true;
   const bundleSize = Math.max(1, product.bundleSize ?? 1);
@@ -134,20 +137,6 @@ export default function TieredPricing({
   const colorCtx = useProductColor();
 
   const hasVariants = !isBundle && Boolean(product.variants && product.variants.length > 0);
-  const defaultVariant = useMemo(() => {
-    if (!hasVariants || !product.variants || product.variants.length === 0) return null;
-    return product.variants.find((v) => v.stock > 0) ?? product.variants[0] ?? null;
-  }, [hasVariants, product.variants]);
-
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
-    defaultVariant?.id ?? null,
-  );
-
-  useEffect(() => {
-    if (hasVariants && defaultVariant && (!selectedVariantId || !product.variants?.some((v) => v.id === selectedVariantId))) {
-      setSelectedVariantId(defaultVariant.id);
-    }
-  }, [hasVariants, defaultVariant, selectedVariantId, product.variants]);
 
   const activeVariant = useMemo(() => {
     if (!hasVariants || !product.variants) return null;
@@ -644,69 +633,6 @@ export default function TieredPricing({
 
   return (
     <div className="space-y-6">
-      {/* For regular products: Variant pills selector if variants exist */}
-      {hasVariants && product.variants && product.variants.length > 0 && (
-        <div className="rounded-2xl border border-soil-900/10 dark:border-dust-50/10 bg-white dark:bg-flora-900 p-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black text-soil-900 dark:text-dust-50">
-              انتخاب سایز / مدل
-            </h3>
-            {activeVariant && (
-              <span className="text-xs text-soil-700/70 dark:text-dust-200/70 font-medium">
-                موجودی: {toFa(activeVariant.stock)} عدد
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2.5 pt-1">
-            {product.variants.map((v) => {
-              const isSelected = v.id === activeVariant?.id;
-              const isOutOfStock = v.stock <= 0;
-              return (
-                <button
-                  key={v.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedVariantId(v.id);
-                    setError(null);
-                    setLimitError(false);
-                  }}
-                  aria-pressed={isSelected}
-                  aria-label={`${v.title} - ${formatToman(v.priceToman)} تومان${isOutOfStock ? ' (ناموجود)' : ''}`}
-                  className={`group relative flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs transition-all focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none focus-visible:ring-offset-2 dark:focus-visible:ring-offset-flora-950 ${
-                    isSelected
-                      ? 'border-flora-600 bg-flora-50/80 dark:bg-flora-950/80 dark:border-flora-500 shadow-xs ring-1 ring-flora-600 dark:ring-flora-500'
-                      : 'border-soil-900/10 dark:border-dust-50/10 bg-dust-50/50 dark:bg-flora-950/40 hover:border-soil-900/25 dark:hover:border-dust-50/30'
-                  } ${isOutOfStock ? 'opacity-55' : ''}`}
-                >
-                  <span
-                    className={`size-2 shrink-0 rounded-full ${
-                      isSelected
-                        ? 'bg-flora-600 dark:bg-flora-400'
-                        : isOutOfStock
-                          ? 'bg-red-400'
-                          : 'bg-soil-400 dark:bg-dust-400'
-                    }`}
-                  />
-                  <span className="font-bold text-soil-900 dark:text-dust-50 text-sm">
-                    {v.title}
-                  </span>
-                  <span className="font-bold text-flora-800 dark:text-flora-300 me-1.5">
-                    {formatToman(v.priceToman)}
-                    <span className="text-[10px] font-normal text-soil-700/70 dark:text-dust-200/70 me-1">
-                      تومان
-                    </span>
-                  </span>
-                  {isOutOfStock && (
-                    <span className="rounded-full bg-red-100 dark:bg-red-950/60 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
-                      ناموجود
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
       {/* For bundles: Swatches for each bundle item before pricing & quantity */}
       {isBundle &&
         product.bundleItems &&
@@ -938,9 +864,9 @@ export default function TieredPricing({
             <button
               type="button"
               onClick={() => setCount((c) => clamp(c - 1))}
-              disabled={count <= minCount}
+              disabled={count <= minCount || maxCount === 0}
               aria-label={isBundle ? 'کاهش تعداد بسته' : 'کاهش تعداد'}
-              className="grid size-9 place-items-center rounded-full text-lg font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 disabled:opacity-35 focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none"
+              className="grid size-9 place-items-center rounded-full text-lg font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 disabled:opacity-35 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none"
             >
               −
             </button>
@@ -955,18 +881,20 @@ export default function TieredPricing({
               step={1}
               min={minCount}
               max={maxCount}
+              disabled={maxCount === 0}
               value={count}
               onChange={(e) => setCount(clamp(Number(e.target.value)))}
               aria-label={isBundle ? 'تعداد بسته سفارش' : 'تعداد سفارش'}
-              className="w-16 border-0 bg-transparent text-center text-base font-black text-soil-900 dark:text-dust-50 outline-none rounded-lg focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+              className="w-16 border-0 bg-transparent text-center text-base font-black text-soil-900 dark:text-dust-50 outline-none rounded-lg disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
             />
             <motion.button
               type="button"
               onClick={handleIncrement}
+              disabled={maxCount === 0}
               animate={shakePlus ? { x: [-5, 5, -5, 5, -2, 2, 0] } : { x: 0 }}
               transition={{ duration: 0.35 }}
               aria-label={isBundle ? 'افزایش تعداد بسته' : 'افزایش تعداد'}
-              className={`grid size-9 place-items-center rounded-full text-lg font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none ${
+              className={`grid size-9 place-items-center rounded-full text-lg font-bold text-soil-900 dark:text-dust-50 transition hover:bg-dust-100 dark:hover:bg-flora-900 disabled:opacity-35 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-flora-600 focus-visible:outline-none ${
                 count >= maxCount ? 'opacity-40 hover:bg-red-50 dark:hover:bg-red-950/40' : ''
               }`}
             >

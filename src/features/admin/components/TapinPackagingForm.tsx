@@ -27,6 +27,7 @@ export type PackageConfigLike = {
   boxId: number;
   packageWeight?: number;
   weight?: number;
+  isNonStandard?: boolean;
   trackingCode?: string;
   barcode?: string;
   orderId?: string;
@@ -52,6 +53,7 @@ export type TapinPackagingFormProps = {
   initialTrackingCodes?: string[] | null;
   initialBarcodes?: string[] | null;
   initialPackageConfigs?: PackageConfigLike[] | null;
+  initialIsNonStandard?: boolean;
   totalWeightGrams: number;
   totalItemsCount: number;
   boxes: TapinBox[];
@@ -62,6 +64,7 @@ type FormBoxState = {
   boxIndex: number;
   boxId: number;
   packageWeight: number; // Empty box tare weight in grams
+  isNonStandard: boolean;
   status: 'REGISTERED' | 'PENDING';
   trackingCode?: string;
   barcode?: string;
@@ -120,6 +123,7 @@ export function TapinPackagingForm({
   initialTrackingCodes: _initialTrackingCodes,
   initialBarcodes: _initialBarcodes,
   initialPackageConfigs,
+  initialIsNonStandard = false,
   totalWeightGrams: _totalWeightGrams,
   totalItemsCount: _totalItemsCount,
   boxes,
@@ -149,6 +153,7 @@ export function TapinPackagingForm({
           boxIndex: typeof cfg.boxIndex === 'number' ? cfg.boxIndex : idx,
           boxId: cfg.boxId || defaultBoxId,
           packageWeight: cfg.packageWeight ?? cfg.weight ?? 1500,
+          isNonStandard: Boolean(cfg.isNonStandard),
           status: isRegistered ? 'REGISTERED' : 'PENDING',
           trackingCode: cfg.trackingCode,
           barcode: cfg.barcode,
@@ -168,6 +173,7 @@ export function TapinPackagingForm({
         boxIndex: 0,
         boxId: defaultBoxId,
         packageWeight: 1500,
+        isNonStandard: Boolean(initialIsNonStandard),
         status: 'REGISTERED',
         trackingCode: initialTrackingCode ?? undefined,
         barcode: initialBarcode ?? undefined,
@@ -229,6 +235,7 @@ export function TapinPackagingForm({
           boxIndex: nextBoxIndex,
           boxId: defaultBoxId,
           packageWeight: 1500,
+          isNonStandard: false,
           status: 'PENDING',
           allocations: allocs,
         });
@@ -241,6 +248,7 @@ export function TapinPackagingForm({
         boxIndex: 0,
         boxId: defaultBoxId,
         packageWeight: 1500,
+        isNonStandard: false,
         status: 'PENDING',
         allocations: {},
       });
@@ -417,6 +425,12 @@ export function TapinPackagingForm({
     );
   }
 
+  function handleNonStandardChange(boxIndex: number, isNonStandard: boolean) {
+    setFormBoxes((prev) =>
+      prev.map((b) => (b.boxIndex === boxIndex ? { ...b, isNonStandard } : b)),
+    );
+  }
+
   function handleAddNewBox() {
     const nextIndex =
       formBoxes.length > 0 ? Math.max(...formBoxes.map((b) => b.boxIndex)) + 1 : 0;
@@ -426,6 +440,7 @@ export function TapinPackagingForm({
         boxIndex: nextIndex,
         boxId: defaultBoxId,
         packageWeight: 1500,
+        isNonStandard: false,
         status: 'PENDING',
         allocations: {},
       },
@@ -482,6 +497,7 @@ export function TapinPackagingForm({
         boxIndex,
         boxId: box.boxId,
         packageWeight: box.packageWeight,
+        isNonStandard: box.isNonStandard,
         items: itemsPayload,
       });
 
@@ -749,22 +765,46 @@ export function TapinPackagingForm({
                     اندازه کارتن (Box Size)
                   </label>
                   {isRegistered ? (
-                    <p className="font-bold text-soil-900 dark:text-dust-50 py-1.5">
-                      {selectedBoxObj?.title || `کارتن کد ${toFa(box.boxId)}`}
-                    </p>
+                    <div className="py-1.5 space-y-1">
+                      <p className="font-bold text-soil-900 dark:text-dust-50">
+                        {box.isNonStandard
+                          ? 'بسته‌بندی غیرمتعارف (کد ۱۰)'
+                          : selectedBoxObj?.title || `کارتن کد ${toFa(box.boxId)}`}
+                      </p>
+                      {box.isNonStandard && (
+                        <p className="text-[10px] font-medium text-soil-700/70 dark:text-dust-300/70">
+                          خارج از کارتن‌های استاندارد
+                        </p>
+                      )}
+                    </div>
                   ) : (
-                    <select
-                      value={box.boxId}
-                      onChange={(e) => handleBoxIdChange(box.boxIndex, Number(e.target.value))}
-                      disabled={isPending}
-                      className="w-full rounded-xl border border-soil-900/15 dark:border-dust-50/15 bg-white dark:bg-flora-900 px-2.5 py-1.5 text-xs text-soil-900 dark:text-dust-50 focus:border-flora-600 focus:outline-none"
-                    >
-                      {boxes.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.title}
-                        </option>
-                      ))}
-                    </select>
+                    <>
+                      <select
+                        value={box.boxId}
+                        onChange={(e) => handleBoxIdChange(box.boxIndex, Number(e.target.value))}
+                        disabled={isPending || box.isNonStandard}
+                        aria-label="اندازه کارتن"
+                        className="w-full rounded-xl border border-soil-900/15 dark:border-dust-50/15 bg-white dark:bg-flora-900 px-2.5 py-1.5 text-xs text-soil-900 dark:text-dust-50 focus:border-flora-600 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {boxes.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.title}
+                          </option>
+                        ))}
+                      </select>
+                      <label className="mt-2 flex items-start gap-2 cursor-pointer select-none">
+                        <input
+                          type="checkbox"
+                          checked={box.isNonStandard}
+                          onChange={(e) => handleNonStandardChange(box.boxIndex, e.target.checked)}
+                          disabled={isPending}
+                          className="mt-0.5 size-3.5 rounded border-soil-900/25 dark:border-dust-50/25 text-flora-700 focus:ring-flora-600 dark:bg-flora-900 cursor-pointer disabled:opacity-50"
+                        />
+                        <span className="text-[11px] font-medium text-soil-800 dark:text-dust-100 leading-tight">
+                          بسته‌بندی غیرمتعارف (خارج از کارتن‌های استاندارد)
+                        </span>
+                      </label>
+                    </>
                   )}
                 </div>
 

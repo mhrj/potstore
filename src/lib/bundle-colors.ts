@@ -560,7 +560,7 @@ export function groupCartItems(items: any[]): GroupedCartItem[] {
   const groupsMap = new Map<string, any[]>();
 
   for (const item of items) {
-    const key =
+    const baseKey =
       item.productId ||
       item.productSlug ||
       item.slug ||
@@ -568,6 +568,11 @@ export function groupCartItems(items: any[]): GroupedCartItem[] {
       item.name ||
       item.id ||
       'unknown';
+    const key = item.variantId
+      ? `${baseKey}::${item.variantId}`
+      : item.variantTitle
+        ? `${baseKey}::${item.variantTitle}`
+        : baseKey;
 
     const list = groupsMap.get(key) || [];
     list.push(item);
@@ -576,8 +581,9 @@ export function groupCartItems(items: any[]): GroupedCartItem[] {
 
   const result: GroupedCartItem[] = [];
 
-  for (const [productId, groupItems] of groupsMap.entries()) {
+  for (const [groupKey, groupItems] of groupsMap.entries()) {
     const first = groupItems[0];
+    const productId = first.productId || groupKey;
     const name = first.productName || first.name || 'محصول بدون نام';
     const slug = first.productSlug || first.slug || null;
     const imageUrl = groupItems.find((it) => it.imageUrl)?.imageUrl || null;

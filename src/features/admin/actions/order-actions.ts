@@ -158,12 +158,14 @@ const registerTapinSchema = z.object({
   orderId: z.string().min(1, 'شناسه سفارش الزامی است'),
   selectedBoxId: z.number().int().positive('شناسه جعبه نامعتبر است').optional(),
   packageWeight: z.number().int().positive('وزن جعبه باید عددی مثبت باشد').optional(),
+  isNonStandard: z.boolean().optional(),
   packages: z
     .array(
       z.object({
         boxId: z.number().int().positive('شناسه جعبه نامعتبر است'),
         packageWeight: z.number().int().positive('وزن جعبه باید عددی مثبت باشد').optional(),
         weight: z.number().int().positive('وزن جعبه باید عددی مثبت باشد').optional(),
+        isNonStandard: z.boolean().optional(),
       }),
     )
     .optional(),
@@ -186,16 +188,19 @@ export async function registerOrderWithTapinAction(input: RegisterTapinInput) {
   }
 
   const { orderId } = parsed.data;
+  const orderIsNonStandard = Boolean(parsed.data.isNonStandard);
   const packages =
     parsed.data.packages && parsed.data.packages.length > 0
       ? parsed.data.packages.map((p) => ({
           boxId: p.boxId,
           packageWeight: p.weight ?? p.packageWeight ?? 500,
+          isNonStandard: p.isNonStandard ?? orderIsNonStandard,
         }))
       : [
           {
             boxId: parsed.data.selectedBoxId ?? 5,
             packageWeight: parsed.data.packageWeight ?? 500,
+            isNonStandard: orderIsNonStandard,
           },
         ];
 
@@ -271,6 +276,8 @@ export async function registerOrderWithTapinAction(input: RegisterTapinInput) {
         items: shippingItems,
       },
       packages,
+      500,
+      orderIsNonStandard,
     );
 
     const parcels = Array.isArray(result) ? result : [];
@@ -280,10 +287,13 @@ export async function registerOrderWithTapinAction(input: RegisterTapinInput) {
     const packageConfigs = parcels.map((p) => ({
       boxId: p.boxId,
       packageWeight: p.packageWeight,
+      isNonStandard: Boolean(p.isNonStandard),
       trackingCode: p.trackingCode,
       barcode: p.barcode,
       orderId: p.orderId,
     }));
+    const anyNonStandard =
+      orderIsNonStandard || parcels.some((p) => Boolean(p.isNonStandard));
 
     const trackingCode =
       (trackingCodes.length > 0 ? trackingCodes.join(', ') : result.trackingCode) ||
@@ -309,6 +319,7 @@ export async function registerOrderWithTapinAction(input: RegisterTapinInput) {
         barcodes: barcodes.length > 0 ? barcodes : Prisma.JsonNull,
         tapinOrderIds: tapinOrderIds.length > 0 ? tapinOrderIds : Prisma.JsonNull,
         packageConfigs: packageConfigs.length > 0 ? packageConfigs : Prisma.JsonNull,
+        isNonStandard: anyNonStandard,
         shippingCarrier: 'پست پیشتاز',
         status: 'PROCESSING',
       },
@@ -322,6 +333,7 @@ export async function registerOrderWithTapinAction(input: RegisterTapinInput) {
         barcodes: true,
         tapinOrderIds: true,
         packageConfigs: true,
+        isNonStandard: true,
         shippingCarrier: true,
       },
     });
@@ -356,6 +368,7 @@ const registerTapinBoxSchema = z.object({
   boxIndex: z.number().int().nonnegative('شماره جعبه نامعتبر است'),
   boxId: z.number().int().positive('شناسه جعبه نامعتبر است'),
   packageWeight: z.number().int().positive('وزن جعبه باید عددی مثبت باشد').default(1500),
+  isNonStandard: z.boolean().optional(),
   allowReRegister: z.boolean().optional(),
   items: z
     .array(
@@ -384,6 +397,7 @@ export async function registerTapinBoxAction(input: RegisterTapinBoxInput) {
   }
 
   const { orderId, boxIndex, boxId, packageWeight, items: boxItemsInput } = parsed.data;
+  const isNonStandard = Boolean(parsed.data.isNonStandard);
 
   const order = await prisma.order.findUnique({
     where: { id: orderId },
@@ -587,11 +601,13 @@ export async function registerTapinBoxAction(input: RegisterTapinBoxInput) {
       boxId,
       packageWeight,
       manualId,
+      isNonStandard,
     );
 
     const registeredBox = {
       boxIndex,
       boxId,
+      isNonStandard,
       packageWeight,
       totalProductWeightGrams,
       status: 'REGISTERED' as const,
@@ -620,6 +636,7 @@ export async function registerTapinBoxAction(input: RegisterTapinBoxInput) {
     const allTrackingCodes = allRegistered.map((b) => b.trackingCode).filter(Boolean);
     const allBarcodes = allRegistered.map((b) => b.barcode).filter(Boolean);
     const allTapinOrderIds = allRegistered.map((b) => b.tapinOrderId || b.orderId).filter(Boolean);
+    const orderIsNonStandard = allRegistered.some((b) => Boolean(b.isNonStandard));
 
     const primaryTracking = allTrackingCodes.join(', ');
     const primaryBarcode = allBarcodes.join(', ');
@@ -638,6 +655,7 @@ export async function registerTapinBoxAction(input: RegisterTapinBoxInput) {
         barcodes: allBarcodes.length > 0 ? allBarcodes : Prisma.JsonNull,
         tapinOrderIds: allTapinOrderIds.length > 0 ? allTapinOrderIds : Prisma.JsonNull,
         packageConfigs: updatedConfigs,
+        isNonStandard: orderIsNonStandard,
         shippingCarrier: 'پست پیشتاز',
         status: newStatus,
       },
@@ -651,6 +669,7 @@ export async function registerTapinBoxAction(input: RegisterTapinBoxInput) {
         barcodes: true,
         tapinOrderIds: true,
         packageConfigs: true,
+        isNonStandard: true,
         shippingCarrier: true,
       },
     });
@@ -745,6 +764,7 @@ export async function resetTapinBoxAction(input: ResetTapinBoxInput) {
   const remainingTapinOrderIds = remainingRegistered
     .map((b) => b.tapinOrderId || b.orderId)
     .filter(Boolean);
+  const remainingIsNonStandard = remainingRegistered.some((b) => Boolean(b.isNonStandard));
 
   const primaryTracking = remainingTrackingCodes.join(', ') || null;
   const primaryBarcode = remainingBarcodes.join(', ') || null;
@@ -766,6 +786,7 @@ export async function resetTapinBoxAction(input: ResetTapinBoxInput) {
       barcodes: remainingBarcodes.length > 0 ? remainingBarcodes : Prisma.JsonNull,
       tapinOrderIds: remainingTapinOrderIds.length > 0 ? remainingTapinOrderIds : Prisma.JsonNull,
       packageConfigs: updatedConfigs,
+      isNonStandard: remainingIsNonStandard,
       status: nextStatus,
     },
     select: {
@@ -778,6 +799,7 @@ export async function resetTapinBoxAction(input: ResetTapinBoxInput) {
       barcodes: true,
       tapinOrderIds: true,
       packageConfigs: true,
+      isNonStandard: true,
     },
   });
 

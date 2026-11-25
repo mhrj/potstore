@@ -672,7 +672,7 @@ export default function ProductForm({
         body: formData,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      if (!res.ok || !data?.url) {
         throw new Error(data?.message ?? 'آپلود عکس ناموفق بود');
       }
 
@@ -1669,7 +1669,7 @@ export default function ProductForm({
           <div>
             <h2 className="text-sm font-black text-soil-900 dark:text-dust-50">تصاویر محصول</h2>
             <p className="mt-1 text-xs text-soil-700/60 dark:text-dust-200/60">
-              تصاویر در فضای محلی سرور ذخیره می‌شوند (<code className="font-mono text-soil-900 dark:text-dust-50">/public/uploads</code>). نسبت ابعاد با بزرگنمایی مناسب حفظ می‌شود.
+              تصاویر به صورت خودکار به فرمت WebP تبدیل شده و در فضای ابری (لیارا) ذخیره می‌شوند.
             </p>
           </div>
           <button
